@@ -236,6 +236,86 @@ Admin dashboard provides:
 - AI-powered business insights
 - Performance trends
 
+## ⚠️ Limitations & Known Issues
+
+### Current Limitations
+
+1. **Payment Integration**
+   - No real payment gateway integration (mock payments only)
+   - No PCI compliance implementation
+   - Limited transaction security features
+
+2. **Communication System**
+   - No email notification system
+   - No SMS integration
+   - No push notifications for mobile devices
+
+3. **Real-time Features**
+   - Limited WebSocket implementation
+   - Map updates require manual refresh
+   - No live chat support system
+
+4. **Security Concerns**
+   - Database credentials stored in plain PHP files
+   - Session-based authentication (vulnerable to CSRF)
+   - No API rate limiting
+   - Limited input validation on some endpoints
+   - No encryption for sensitive data at rest
+
+5. **Scalability**
+   - No load balancing configuration
+   - Single database instance (no replication)
+   - No caching layer (Redis/Memcached)
+   - Limited horizontal scaling support
+
+6. **Development & Deployment**
+   - No automated testing suite (unit/integration tests)
+   - No CI/CD pipeline
+   - No Docker containerization
+   - Manual deployment process
+   - No staging environment setup
+
+7. **Application Features**
+   - Single language support (no internationalization)
+   - No Progressive Web App (PWA) capabilities
+   - No native mobile applications
+   - Limited offline functionality
+   - No data export/import features
+
+8. **Monitoring & Logging**
+   - Basic error logging only
+   - No centralized logging system
+   - No application performance monitoring (APM)
+   - No automated backup system
+   - Limited analytics tracking
+
+9. **User Experience**
+   - No dark mode support
+   - Limited accessibility features (WCAG compliance)
+   - No advanced search filters
+   - Basic recommendation algorithm
+
+10. **API & Documentation**
+    - No API versioning
+    - Limited API documentation
+    - No OpenAPI/Swagger specification
+    - No SDK for third-party integration
+
+### Planned Improvements
+
+- [ ] Integrate Stripe/PayPal for payments
+- [ ] Add email service (SendGrid/Mailgun)
+- [ ] Implement WebSocket for real-time updates
+- [ ] Add comprehensive test coverage
+- [ ] Implement JWT authentication across all endpoints
+- [ ] Add Docker support
+- [ ] Create CI/CD pipeline
+- [ ] Implement API rate limiting
+- [ ] Add multi-language support (i18n)
+- [ ] Develop native mobile apps
+- [ ] Implement data encryption
+- [ ] Add monitoring and alerting system
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
