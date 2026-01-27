@@ -1,0 +1,8 @@
+# Rentify Logs Directory
+
+This directory contains application logs and should not be publicly accessible.
+Ensure proper permissions are set to prevent unauthorized access.
+
+Permission recommendations (Linux/Unix):
+- chmod 700 logs/
+- chmod 600 logs/*.log
