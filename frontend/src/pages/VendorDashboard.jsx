@@ -62,6 +62,7 @@ const VendorDashboard = () => {
     const [selectedHotel, setSelectedHotel] = useState(null);
     const [hotelStats, setHotelStats] = useState(null);
     const [statsLoading, setStatsLoading] = useState(false);
+    const [editingHotel, setEditingHotel] = useState(null); // State for editing
 
     const getImageUrl = (url) => {
         if (!url || url === 'assets/default_hotel.png' || url.includes('default_property')) return '/assets/default_hotel.png';
@@ -117,6 +118,9 @@ const VendorDashboard = () => {
                 if (propData.success && Array.isArray(propData.data)) {
                     setHotels(propData.data);
                 }
+            } else {
+                const text = await propRes.text();
+                console.error('API Error Response:', text);
             }
 
             // Fetch User
@@ -154,6 +158,118 @@ const VendorDashboard = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteHotel = (id) => {
+        showConfirm(
+            'Are you sure you want to delete this property? All associated rooms and data will be permanently removed.',
+            async () => {
+                try {
+                    const res = await fetch('/api/hotels/delete.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id }),
+                        credentials: 'include'
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        showSuccess('Property deleted successfully');
+                        fetchData();
+                    } else {
+                        showError(result.message || 'Failed to delete property');
+                    }
+                } catch (err) {
+                    showError('Network error deleting property');
+                }
+            },
+            'Confirm Property Deletion'
+        );
+    };
+
+    const handleEditButtonClick = (hotel, e) => {
+        e.stopPropagation(); // Don't trigger hotel stats
+        setEditingHotel(hotel);
+        setFormData({
+            name: hotel.name || '',
+            address: hotel.address || '',
+            description: hotel.description || '',
+            price_per_hour: hotel.price_per_hour || '',
+            hotel_type: hotel.hotel_type || 'hotel',
+            latitude: hotel.latitude || '',
+            longitude: hotel.longitude || '',
+            contact_phone: hotel.contact_phone || '',
+            contact_email: hotel.contact_email || '',
+            emergency_contact: hotel.emergency_contact || '',
+            check_in_time: hotel.check_in_time || '14:00',
+            check_out_time: hotel.check_out_time || '12:00',
+            cancellation_policy: hotel.cancellation_policy || '',
+            house_rules: hotel.house_rules || '',
+            min_booking_hours: hotel.min_booking_hours || 1,
+            max_booking_hours: hotel.max_booking_hours || 24,
+            has_wifi: !!parseInt(hotel.has_wifi),
+            has_parking: !!parseInt(hotel.has_parking),
+            has_ac: !!parseInt(hotel.has_ac),
+            has_elevator: !!parseInt(hotel.has_elevator),
+            has_restaurant: !!parseInt(hotel.has_restaurant),
+            has_gym: !!parseInt(hotel.has_gym),
+            has_pool: !!parseInt(hotel.has_pool),
+            has_laundry: !!parseInt(hotel.has_laundry)
+        });
+        setActiveTab('add'); // Switch to form tab
+    };
+
+    const handleUpdateHotel = async (e) => {
+        e.preventDefault();
+        setSubmitting(true);
+
+        const data = new FormData();
+        data.append('id', editingHotel.id);
+
+        Object.keys(formData).forEach(key => {
+            if (key.startsWith('has_')) {
+                data.append(key, formData[key] ? 1 : 0);
+            } else {
+                data.append(key, formData[key]);
+            }
+        });
+
+        if (imageFile) data.append('image', imageFile);
+
+        try {
+            const res = await fetch('/api/hotels/update.php', {
+                method: 'POST',
+                body: data,
+                credentials: 'include'
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                showSuccess('Hotel updated successfully!');
+                setEditingHotel(null);
+                setActiveTab('hotels');
+                resetForm();
+                fetchData();
+            } else {
+                showError('Error: ' + result.message);
+            }
+        } catch (err) {
+            showError('Network error updating hotel');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({
+            name: '', address: '', description: '', price_per_hour: '', hotel_type: 'hotel', latitude: '', longitude: '',
+            contact_phone: '', contact_email: '', emergency_contact: '',
+            check_in_time: '14:00', check_out_time: '12:00', cancellation_policy: '', house_rules: '',
+            min_booking_hours: 1, max_booking_hours: 24,
+            has_wifi: true, has_parking: false, has_ac: true, has_elevator: false,
+            has_restaurant: false, has_gym: false, has_pool: false, has_laundry: false
+        });
+        setImageFile(null);
+        setEditingHotel(null);
     };
 
     const handleAddRoomType = async (e) => {
@@ -222,15 +338,7 @@ const VendorDashboard = () => {
                 showSuccess('Hotel added successfully!');
                 setActiveTab('hotels');
                 // Reset form with default values
-                setFormData({
-                    name: '', address: '', description: '', price_per_hour: '', hotel_type: 'hotel', latitude: '', longitude: '',
-                    contact_phone: '', contact_email: '', emergency_contact: '',
-                    check_in_time: '14:00', check_out_time: '12:00', cancellation_policy: '', house_rules: '',
-                    min_booking_hours: 1, max_booking_hours: 24,
-                    has_wifi: true, has_parking: false, has_ac: true, has_elevator: false,
-                    has_restaurant: false, has_gym: false, has_pool: false, has_laundry: false
-                });
-                setImageFile(null);
+                resetForm();
                 fetchData();
             } else {
                 showError('Error: ' + result.message);
@@ -434,10 +542,10 @@ const VendorDashboard = () => {
                         <Plus size={18} /> Food Orders ({foodOrders.length})
                     </button>
                     <button
-                        onClick={() => setActiveTab('add')}
+                        onClick={() => { resetForm(); setActiveTab('add'); }}
                         className={`px-4 py-2 font-bold flex items-center gap-2 transition-colors border-b-2 ${activeTab === 'add' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
                     >
-                        <Plus size={18} /> Add Hotel
+                        <Plus size={18} /> {editingHotel ? 'Edit Hotel' : 'Add Hotel'}
                     </button>
                 </div>
 
@@ -474,11 +582,23 @@ const VendorDashboard = () => {
                                         </div>
                                     </div>
                                     <div className="p-5">
-                                        <h3 className="text-lg font-bold text-secondary mb-1">{p.name}</h3>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <h3 className="text-lg font-bold text-secondary truncate pr-2">{p.name}</h3>
+                                            <div className="flex gap-2">
+                                                <button onClick={(e) => handleEditButtonClick(p, e)} className="p-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Edit">
+                                                    <Settings size={14} />
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteHotel(p.id); }} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="Delete">
+                                                    <XCircle size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                         <p className="text-gray-500 text-sm mb-3 truncate flex items-center gap-1"><MapPin size={14} />{p.address}</p>
                                         <div className="flex justify-between items-center pt-3 border-t border-gray-50">
                                             <span className="text-primary font-bold">৳{p.price_per_hour}/hr</span>
-                                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Active</span>
+                                            <span className={`text-xs px-2 py-1 rounded font-bold ${parseInt(p.is_active) ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                {parseInt(p.is_active) ? 'Active' : 'Inactive'}
+                                            </span>
                                         </div>
                                     </div>
                                 </motion.div>
@@ -848,10 +968,10 @@ const VendorDashboard = () => {
                     {activeTab === 'add' && (
                         <div className="max-w-4xl mx-auto">
                             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 mb-6">
-                                <h2 className="text-3xl font-black text-secondary mb-2 italic">List a New Hotel</h2>
-                                <p className="text-gray-500 text-sm mb-8">Fill in the details to add your hotel to Rentify</p>
+                                <h2 className="text-3xl font-black text-secondary mb-2 italic">{editingHotel ? 'Edit Property' : 'List a New Hotel'}</h2>
+                                <p className="text-gray-500 text-sm mb-8">{editingHotel ? `Update details for ${editingHotel.name}` : 'Fill in the details to add your hotel to Rentify'}</p>
 
-                                <form onSubmit={handleAddHotel} className="space-y-8">
+                                <form onSubmit={editingHotel ? handleUpdateHotel : handleAddHotel} className="space-y-8">
                                     {/* Basic Information Section */}
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2 mb-4">
@@ -1122,13 +1242,24 @@ const VendorDashboard = () => {
                                         </div>
                                     </div>
 
-                                    <button
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="w-full bg-primary text-white font-bold py-4 rounded-xl hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
-                                    >
-                                        {submitting ? <Loader className="animate-spin" /> : 'Publish Hotel'}
-                                    </button>
+                                    <div className="flex gap-4">
+                                        {editingHotel && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { resetForm(); setActiveTab('hotels'); }}
+                                                className="flex-1 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl hover:bg-gray-200 transition-all"
+                                            >
+                                                Cancel
+                                            </button>
+                                        )}
+                                        <button
+                                            type="submit"
+                                            disabled={submitting}
+                                            className={`${editingHotel ? 'flex-[2]' : 'w-full'} bg-primary text-white font-bold py-4 rounded-xl hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2`}
+                                        >
+                                            {submitting ? <Loader className="animate-spin" /> : (editingHotel ? 'Save Changes' : 'Publish Hotel')}
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>

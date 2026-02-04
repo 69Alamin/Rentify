@@ -1,11 +1,6 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
+require_once __DIR__ . '/../cors.php';
+handle_cors();
 
 session_start();
 
@@ -15,17 +10,17 @@ if (isset($_SESSION['user_id'])) {
     $res = db_query("SELECT wallet_balance FROM users WHERE id = ?", 'i', [$uid]);
     $u = mysqli_fetch_assoc($res);
     
-    echo json_encode([
+    send_json([
         'authenticated' => true,
         'user' => [
             'id' => $_SESSION['user_id'],
-            'name' => $_SESSION['name'],
-            'email' => $_SESSION['email'],
+            'full_name' => $_SESSION['full_name'] ?? 'Vendor',
+            'email' => $_SESSION['email'] ?? '',
             'type' => $_SESSION['user_type'],
-            'balance' => (float)($u['wallet_balance'] ?? 0)
+            'profile_photo' => $_SESSION['profile_photo'] ?? null
         ]
     ]);
 } else {
-    echo json_encode(['authenticated' => false]);
+    send_json(['authenticated' => false]);
 }
 ?>

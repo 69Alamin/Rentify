@@ -1,14 +1,7 @@
 <?php
 header('Content-Type: application/json');
-// Allow common dev ports
-$allowed_origins = ['http://localhost:5173','http://localhost:5174','http://localhost:5175','http://localhost:5176','http://localhost:5177','http://127.0.0.1:5173'];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-header('Access-Control-Allow-Origin: ' . (in_array($origin, $allowed_origins, true) ? $origin : 'http://localhost:5173'));
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
+require_once __DIR__ . '/../cors.php';
+handle_cors();
 
 session_start();
 require_once __DIR__ . '/../../db_conn.php';
@@ -24,8 +17,7 @@ $status = isset($data['status']) ? $data['status'] : '';
 $minutes = isset($data['minutes']) ? (int)$data['minutes'] : 0;
 
 if (!$order_id || !$status) {
-    echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
-    exit();
+    send_json(['success' => false, 'message' => 'Invalid parameters']);
 }
 
 // Security update: Ensure order belongs to a property owned by this vendor
@@ -37,8 +29,8 @@ $stmt = mysqli_prepare($conn, $sql);
 mysqli_stmt_bind_param($stmt, 'si', $status, $order_id);
 
 if (mysqli_stmt_execute($stmt)) {
-    echo json_encode(['success' => true, 'message' => 'Food order status updated']);
+    send_json(['success' => true, 'message' => 'Food order status updated']);
 } else {
-    echo json_encode(['success' => false, 'message' => 'Database error: ' . mysqli_stmt_error($stmt)]);
+    send_json(['success' => false, 'message' => 'Database error']);
 }
 ?>

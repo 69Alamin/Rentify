@@ -1,27 +1,6 @@
 <?php
-header('Content-Type: application/json');
-// Allow all common dev ports
-$allowed_origins = [
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-    'http://localhost:5177',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'http://127.0.0.1:5175',
-    'http://127.0.0.1:5176',
-    'http://127.0.0.1:5177',
-];
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowed_origins)) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-}
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
+require_once __DIR__ . '/cors.php';
+handle_cors();
 
 session_start();
 require_once __DIR__ . '/../db_conn.php';
@@ -36,14 +15,14 @@ $types = '';
 
 if ($mine) {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
-        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-        exit();
+        send_json(['success' => false, 'message' => 'Unauthorized']);
     }
     $whereClauses[] = "p.vendor_id = ?";
+    $whereClauses[] = "p.is_active = 1";
     $params[] = $_SESSION['user_id'];
     $types .= 'i';
 } else {
-    $whereClauses[] = "p.is_verified = 1";
+    $whereClauses[] = "p.is_verified = 1 AND p.is_active = 1";
 }
 
 if ($search) {
@@ -69,27 +48,68 @@ $typeSql = "IFNULL(NULLIF(p.hotel_type, ''), CASE
     ELSE 'Hotel'
 END) as hotel_type";
 
-
 // Provide a synthetic property_type and derive a price_per_hour from room_types
-$sql = "SELECT 
-        p.id, 
-        p.name, 
-        p.address, 
-        p.description, 
-        p.image_url, 
-        p.latitude, 
-        p.longitude,
-        $typeSql,
-        MIN(rt.base_price_per_hour) AS price_per_hour,
-        ROUND(AVG(pr.rating), 1) AS rating,
-        COUNT(pr.id) as review_count
-    FROM hotels p
-    LEFT JOIN room_types rt ON p.id = rt.hotel_id
-    LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
-    $whereSQL
-    GROUP BY p.id
-    ORDER BY p.id DESC
-    LIMIT ?";
+if ($mine) {
+    $sql = "SELECT 
+            p.id,
+            p.name,
+            p.address,
+            p.description,
+            p.image_url,
+            p.latitude,
+            p.longitude,
+            p.is_active,
+            p.is_verified,
+            p.hotel_type as hotel_type,
+            p.contact_phone,
+            p.contact_email,
+            p.emergency_contact,
+            p.check_in_time,
+            p.check_out_time,
+            p.cancellation_policy,
+            p.house_rules,
+            p.min_booking_hours,
+            p.max_booking_hours,
+            p.has_wifi,
+            p.has_parking,
+            p.has_ac,
+            p.has_elevator,
+            p.has_restaurant,
+            p.has_gym,
+            p.has_pool,
+            p.has_laundry,
+            MIN(rt.base_price_per_hour) AS price_per_hour,
+            ROUND(AVG(pr.rating), 1) AS rating,
+            COUNT(pr.id) as review_count
+        FROM hotels p
+        LEFT JOIN room_types rt ON p.id = rt.hotel_id
+        LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
+        $whereSQL
+        GROUP BY p.id
+        ORDER BY p.id DESC
+        LIMIT ?";
+} else {
+    $sql = "SELECT 
+            p.id, 
+            p.name, 
+            p.address, 
+            p.description, 
+            p.image_url, 
+            p.latitude, 
+            p.longitude,
+            p.is_active,
+            $typeSql,
+            MIN(rt.base_price_per_hour) AS price_per_hour,
+            ROUND(AVG(pr.rating), 1) AS rating,
+            COUNT(pr.id) as review_count
+        FROM hotels p
+        LEFT JOIN room_types rt ON p.id = rt.hotel_id
+        LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
+        $whereSQL
+        GROUP BY p.id
+        ORDER BY p.id DESC
+        LIMIT ?";
+}
 
 $params[] = $limit;
 $types .= 'i';
@@ -103,7 +123,9 @@ if ($result) {
         // For now, assuming image_url is relative or check existance
         // If image_url is empty, use a placeholder
         // Normalize image URL for frontend (serve from Apache, not Vite)
-        $baseUrl = 'http://localhost/Rentify';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $baseUrl = "{$protocol}://{$host}/Rentify";
         $defaultImage = $baseUrl . '/assets/default_hotel.png';
 
         $rawImage = trim((string)$row['image_url']);
@@ -120,45 +142,23 @@ if ($result) {
         $relativeToRoot = ltrim(str_replace('/Rentify/', '/', $urlPath), '/');
         $localPath = __DIR__ . '/../' . $relativeToRoot;
 
-        // Map seeded images based on property id if the referenced file is missing
-        $seededMap = [
-            1 => 'assets/hotels/shihab_palace.png',
-            2 => 'assets/hotels/room_suite_royal.png',
-            3 => 'assets/hotels/room_executive.png',
-            4 => 'assets/hotels/room_suite_royal.png',
-            5 => 'assets/hotels/room_executive.png',
-            6 => 'assets/hotels/room_suite_royal.png',
-            7 => 'assets/hotels/shihab_palace.png',
-            8 => 'assets/hotels/room_executive.png',
-            9 => 'assets/hotels/room_suite_royal.png',
-            10 => 'assets/hotels/room_executive.png',
-            11 => 'assets/hotels/shihab_palace.png',
-            12 => 'assets/hotels/room_suite_royal.png',
-            13 => 'assets/hotels/room_executive.png',
-            14 => 'assets/hotels/room_suite_royal.png',
-            15 => 'assets/hotels/room_executive.png',
-            16 => 'assets/hotels/shihab_palace.png',
-            17 => 'assets/hotels/room_suite_royal.png',
-            18 => 'assets/hotels/room_executive.png',
-            19 => 'assets/hotels/shihab_palace.png',
-            20 => 'assets/hotels/room_executive.png',
-        ];
-
-        if (empty($rawImage) || !file_exists($localPath)) {
-            if (isset($seededMap[$row['id']])) {
-                $mapped = $seededMap[$row['id']];
-                $row['image_url'] = $baseUrl . '/' . $mapped;
-            } else {
-                $row['image_url'] = $defaultImage;
-            }
-        } else {
+        // Final decision: if it's already an absolute online URL, we use it.
+        // Otherwise, if it's a valid local file, we use it. 
+        // If neither, we use the default.
+        if (preg_match('/^https?:\/\//', $rawImage)) {
+            $row['image_url'] = $rawImage;
+        } elseif (!empty($rawImage) && file_exists($localPath)) {
             $row['image_url'] = $normalized;
+        } else {
+            $row['image_url'] = $defaultImage;
         }
+        if (isset($row['is_active'])) $row['is_active'] = (int)$row['is_active'];
+        if (isset($row['is_verified'])) $row['is_verified'] = (int)$row['is_verified'];
         $hotels[] = $row;
     }
 } else {
-    echo json_encode(['success' => false, 'message' => 'Database query failed']);
-    exit();
+    send_json(['success' => false, 'message' => 'Database query failed'], 500);
 }
 
-echo json_encode(['success' => true, 'data' => $hotels]);
+send_json(['success' => true, 'data' => $hotels]);
+?>

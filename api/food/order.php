@@ -1,19 +1,12 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
+require_once __DIR__ . '/../cors.php';
+handle_cors();
 
 session_start();
 require_once __DIR__ . '/../../db_conn.php';
 
 if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit();
+    send_json(['success' => false, 'message' => 'Unauthorized'], 401);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
@@ -56,8 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     $orders = [];
     while($row = mysqli_fetch_assoc($res)) $orders[] = $row;
-    echo json_encode(['success' => true, 'data' => $orders]);
-    exit();
+    send_json(['success' => true, 'data' => $orders]);
 }
 
 // Handle Order Placement
@@ -69,8 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $delivery_time = $input['delivery_time'] ?? date('Y-m-d H:i:s', strtotime('+30 minutes'));
 
     if ($booking_id <= 0 || empty($items)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid order data']);
-        exit();
+        send_json(['success' => false, 'message' => 'Invalid order data']);
     }
 
     $items_json = json_encode($items);
@@ -99,9 +90,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db_query("INSERT INTO notifications (user_id, title, message, type, reference_id, created_at, is_read) VALUES (?, ?, ?, 'food_order', ?, NOW(), 0)", 'issi', [$vid, $title, $msg, $order_id]);
         }
 
-        echo json_encode(['success' => true, 'message' => 'Order placed successfully']);
+        send_json(['success' => true, 'message' => 'Order placed successfully']);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Failed to place order']);
+        send_json(['success' => false, 'message' => 'Failed to place order']);
     }
 }
 ?>

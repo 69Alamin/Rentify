@@ -98,6 +98,10 @@ const Hotels = () => {
                                             src={getImageUrl(hotel.image_url)}
                                             alt={hotel.name}
                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            onError={(e) => {
+                                                console.error(`Failed to load image for ${hotel.name}:`, hotel.image_url);
+                                                e.target.src = '/assets/default_hotel.png';
+                                            }}
                                         />
                                         {hotel.rating && (
                                             <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-2 py-1 rounded-lg text-sm font-bold text-secondary flex items-center gap-1">

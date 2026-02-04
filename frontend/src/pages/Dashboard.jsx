@@ -676,7 +676,10 @@ const Dashboard = () => {
                                                     src={getImageUrl(booking.image_url)}
                                                     alt={booking.hotel_name}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                                    onError={(e) => { e.target.src = '/assets/default_hotel.png'; }}
+                                                    onError={(e) => {
+                                                        console.error(`Failed to load image for ${booking.hotel_name}:`, booking.image_url);
+                                                        e.target.src = '/assets/default_hotel.png';
+                                                    }}
                                                 />
                                                 {remaining && (
                                                     <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[9px] font-bold px-2 py-0.5 rounded-full">

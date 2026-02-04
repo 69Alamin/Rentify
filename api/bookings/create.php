@@ -1,34 +1,24 @@
-<?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
+require_once __DIR__ . '/../cors.php';
+handle_cors();
 
 session_start();
 require_once __DIR__ . '/../../db_conn.php';
+
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
-    echo json_encode(['success' => false, 'message' => 'Invalid input']);
-    exit();
+    send_json(['success' => false, 'message' => 'Invalid input']);
 }
 
 $user_id = $_SESSION['user_id'] ?? null;
 
 if (!$user_id) {
-    // Store pending booking in session for guest persistence
     $_SESSION['pending_booking'] = $input;
-    echo json_encode(['success' => false, 'require_login' => true, 'message' => 'Please login to complete your booking.']);
-    exit();
+    send_json(['success' => false, 'require_login' => true, 'message' => 'Please login to complete your booking.']);
 }
 
 // Enforce Customer-Only Booking (RBAC)
 if (isset($_SESSION['user_type']) && $_SESSION['user_type'] !== 'customer') {
-    http_response_code(403);
-    echo json_encode(['success' => false, 'message' => 'Only customers can make bookings. Please log in with a customer account.']);
-    exit();
+    send_json(['success' => false, 'message' => 'Only customers can make bookings. Please log in with a customer account.'], 403);
 }
 
 $guest_name = $input['guest_name'] ?? $_SESSION['name'] ?? null;
@@ -52,8 +42,7 @@ if ($vehicle_type === 'motorbike') {
 }
 
 if ($hotel_id <= 0 || $room_type_id <= 0 || empty($check_in_date) || $booked_hours <= 0) {
-    echo json_encode(['success' => false, 'message' => 'Missing required fields']);
-    exit();
+    send_json(['success' => false, 'message' => 'Missing required fields']);
 }
 
 // 1. Fetch Price/Capacity and Hotel Info
@@ -63,14 +52,12 @@ $query = "SELECT rt.base_price_per_hour, rt.capacity, p.address as hotel_address
           WHERE rt.id = ? AND rt.hotel_id = ?";
 $result = db_query($query, 'ii', [$room_type_id, $hotel_id]);
 if (!$result || mysqli_num_rows($result) === 0) {
-    echo json_encode(['success' => false, 'message' => 'Invalid room type or hotel association']);
-    exit();
+    send_json(['success' => false, 'message' => 'Invalid room type or hotel association']);
 }
 $room_data = mysqli_fetch_assoc($result);
 
 if ($guests > $room_data['capacity']) {
-    echo json_encode(['success' => false, 'message' => 'Guests exceed room capacity']);
-    exit();
+    send_json(['success' => false, 'message' => 'Guests exceed room capacity']);
 }
 
 // Calculate Price
@@ -202,11 +189,10 @@ try {
     }
 
     mysqli_commit($conn);
-    unset($_SESSION['pending_booking']);
-    echo json_encode(['success' => true, 'booking_id' => $booking_id]);
+    send_json(['success' => true, 'booking_id' => $booking_id]);
 
 } catch (Exception $e) {
     mysqli_rollback($conn);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    send_json(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

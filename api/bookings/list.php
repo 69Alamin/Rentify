@@ -34,35 +34,17 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $user_id = (int)$_SESSION['user_id'];
-$baseUrl = 'http://localhost/Rentify';
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$baseUrl = "{$protocol}://{$host}/Rentify";
 $defaultImage = $baseUrl . '/assets/default_hotel.png';
 
-// Seeded property images
-$seededMap = [
-    1 => 'assets/hotels/shihab_palace.png',
-    2 => 'assets/hotels/room_suite_royal.png',
-    3 => 'assets/hotels/room_executive.png',
-    4 => 'assets/hotels/room_suite_royal.png',
-    5 => 'assets/hotels/room_executive.png',
-    6 => 'assets/hotels/room_suite_royal.png',
-    7 => 'assets/hotels/shihab_palace.png',
-    8 => 'assets/hotels/room_executive.png',
-    9 => 'assets/hotels/room_suite_royal.png',
-    10 => 'assets/hotels/room_executive.png',
-    11 => 'assets/hotels/shihab_palace.png',
-    12 => 'assets/hotels/room_suite_royal.png',
-    13 => 'assets/hotels/room_executive.png',
-    14 => 'assets/hotels/room_suite_royal.png',
-    15 => 'assets/hotels/room_executive.png',
-    16 => 'assets/hotels/shihab_palace.png',
-    17 => 'assets/hotels/room_suite_royal.png',
-    18 => 'assets/hotels/room_executive.png',
-    19 => 'assets/hotels/shihab_palace.png',
-    20 => 'assets/hotels/room_executive.png',
-];
-
-function normalize_booking_image($raw, $hotel_id, $seededMap, $baseUrl, $defaultImage) {
+function normalize_booking_image($raw, $hotel_id, $baseUrl, $defaultImage) {
     $normalized = $raw ?? '';
+
+    if (preg_match('/^https?:\/\//', $raw)) {
+        return $raw;
+    }
 
     if (!preg_match('/^https?:\/\//', $normalized) && $normalized !== '') {
         $normalized = $baseUrl . '/' . ltrim($normalized, '/');
@@ -71,9 +53,6 @@ function normalize_booking_image($raw, $hotel_id, $seededMap, $baseUrl, $default
     $localPath = __DIR__ . '/../../' . ltrim(parse_url($normalized, PHP_URL_PATH) ?? '', '/');
 
     if (empty($raw) || !file_exists($localPath)) {
-        if (isset($seededMap[$hotel_id])) {
-            return $baseUrl . '/' . ltrim($seededMap[$hotel_id], '/');
-        }
         return $defaultImage;
     }
 
@@ -114,7 +93,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     $row['is_active'] = ($row['booking_status'] == 'confirmed' || $row['booking_status'] == 'active');
     
     // Normalize image URL with fallback
-    $row['image_url'] = normalize_booking_image($row['image_url'] ?? '', $row['hotel_id'] ?? 0, $seededMap, $baseUrl, $defaultImage);
+    $row['image_url'] = normalize_booking_image($row['image_url'] ?? '', $row['hotel_id'] ?? 0, $baseUrl, $defaultImage);
     
     $bookings[] = $row;
 }

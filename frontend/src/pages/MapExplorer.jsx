@@ -132,7 +132,7 @@ const RoutingMachine = ({ userLocation, destination, onRouteUpdate }) => {
     return null;
 };
 
-const MapExplorer = () => {
+const MapExplorer = ({ isMobile = false }) => {
     const { showSuccess, showError, showConfirm } = useModal();
     const [hotels, setHotels] = useState([]);
     const [activeHotel, setActiveHotel] = useState(null);
@@ -310,7 +310,7 @@ const MapExplorer = () => {
     );
 
     return (
-        <div className="w-full h-screen relative bg-gray-100 overflow-hidden pt-20">
+        <div className={`w-full h-screen relative bg-gray-100 overflow-hidden ${isMobile ? 'pt-0' : 'pt-20'}`}>
             {/* Map Container - Full Screen Background */}
             <div className="absolute inset-0 z-0">
                 <MapContainer
@@ -369,7 +369,7 @@ const MapExplorer = () => {
                                             <span className="text-[10px] text-gray-400 font-medium">({location.review_count || '120+'})</span>
                                         </div>
                                         <Link
-                                            to={`/hotels/${location.id}`}
+                                            to={isMobile ? `/mobile/hotels/${location.id}` : `/hotels/${location.id}`}
                                             className="flex items-center justify-center gap-2 w-full text-center py-4 bg-[#4f46e5] text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-lg shadow-indigo-300/50 hover:bg-[#4338ca] hover:scale-[1.05] hover:shadow-indigo-400/60 active:scale-95"
                                         >
                                             Book This Stay <ChevronRight size={14} className="stroke-[3px]" />
@@ -383,7 +383,7 @@ const MapExplorer = () => {
             </div>
 
             {/* Google-Style Floating Search Pill */}
-            <div className="absolute top-24 left-6 z-[1005] w-full max-w-sm pointer-events-none">
+            <div className={`absolute ${isMobile ? 'top-6' : 'top-24'} left-6 z-[1005] w-full max-w-sm pointer-events-none`}>
                 <div className="pointer-events-auto bg-white rounded-full shadow-google-pill border border-gray-100 p-2 flex items-center gap-2">
                     <div className="w-10 h-10 flex items-center justify-center text-[#1a73e8]">
                         <Search size={20} />
@@ -407,59 +407,61 @@ const MapExplorer = () => {
             </div>
 
             {/* Floating Hotel Sheet (Left Edge) */}
-            <div className={`absolute top-52 left-6 bottom-10 w-full md:w-[380px] pointer-events-none z-[1002] transition-all duration-500 ${destination ? '-translate-x-[450px] opacity-0' : 'translate-x-0 opacity-100'}`}>
-                <div className="h-full flex flex-col pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-google-sheet border border-gray-100 overflow-hidden">
-                    <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-black text-secondary tracking-tight">Stay Explorer</h2>
-                            <p className="text-[10px] uppercase tracking-widest text-[#1a73e8] font-bold mt-0.5">{hotels.length} verified stays</p>
+            {!isMobile && (
+                <div className={`absolute top-52 left-6 bottom-10 w-full md:w-[380px] pointer-events-none z-[1002] transition-all duration-500 ${destination ? '-translate-x-[450px] opacity-0' : 'translate-x-0 opacity-100'}`}>
+                    <div className="h-full flex flex-col pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-google-sheet border border-gray-100 overflow-hidden">
+                        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-black text-secondary tracking-tight">Stay Explorer</h2>
+                                <p className="text-[10px] uppercase tracking-widest text-[#1a73e8] font-bold mt-0.5">{hotels.length} verified stays</p>
+                            </div>
+                            <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
+                                <Filter size={14} />
+                            </div>
                         </div>
-                        <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
-                            <Filter size={14} />
-                        </div>
-                    </div>
 
-                    <div className="flex-grow overflow-y-auto custom-scrollbar p-3 space-y-2 bg-gray-50/30">
-                        {hotels.map((prop, idx) => (
-                            <motion.div
-                                key={prop.id}
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: idx * 0.03 }}
-                                onClick={() => handleHotelSelect(prop)}
-                                className={`group rounded-2xl border transition-all duration-300 cursor-pointer p-3 flex gap-4 ${activeHotel?.id === prop.id
-                                    ? 'bg-blue-50 border-blue-200'
-                                    : 'bg-white border-transparent hover:bg-gray-50'
-                                    }`}
-                            >
-                                <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                                    <img src={getImageUrl(prop.image_url)} alt={prop.name} className="w-full h-full object-cover" />
-                                </div>
-                                <div className="flex flex-col justify-between flex-grow">
-                                    <div>
-                                        <h3 className="font-bold text-sm text-secondary line-clamp-1 group-hover:text-[#1a73e8]">{prop.name}</h3>
-                                        <div className="flex items-center gap-1 mt-0.5">
-                                            <Star size={10} className="fill-yellow-400 text-yellow-400" />
-                                            <span className="text-[10px] font-bold text-gray-500">{prop.rating || '4.8'}</span>
+                        <div className="flex-grow overflow-y-auto custom-scrollbar p-3 space-y-2 bg-gray-50/30">
+                            {hotels.map((prop, idx) => (
+                                <motion.div
+                                    key={prop.id}
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: idx * 0.03 }}
+                                    onClick={() => handleHotelSelect(prop)}
+                                    className={`group rounded-2xl border transition-all duration-300 cursor-pointer p-3 flex gap-4 ${activeHotel?.id === prop.id
+                                        ? 'bg-blue-50 border-blue-200'
+                                        : 'bg-white border-transparent hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                                        <img src={getImageUrl(prop.image_url)} alt={prop.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="flex flex-col justify-between flex-grow">
+                                        <div>
+                                            <h3 className="font-bold text-sm text-secondary line-clamp-1 group-hover:text-[#1a73e8]">{prop.name}</h3>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                                <Star size={10} className="fill-yellow-400 text-yellow-400" />
+                                                <span className="text-[10px] font-bold text-gray-500">{prop.rating || '4.8'}</span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-400 mt-1 truncate">{prop.address}</p>
                                         </div>
-                                        <p className="text-[10px] text-gray-400 mt-1 truncate">{prop.address}</p>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className="text-xs font-black text-[#3c4043]">৳{prop.price_per_hour}<span className="opacity-40 font-bold ml-1">/hr</span></span>
+                                            <Link
+                                                to={isMobile ? `/mobile/hotels/${prop.id}` : `/hotels/${prop.id}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] text-white rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-[0_4px_14px_0_rgba(79,70,229,0.3)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] hover:bg-[#4338ca] active:scale-95"
+                                            >
+                                                Book This Stay <ChevronRight size={14} className="stroke-[3px]" />
+                                            </Link>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-between mt-1">
-                                        <span className="text-xs font-black text-[#3c4043]">৳{prop.price_per_hour}<span className="opacity-40 font-bold ml-1">/hr</span></span>
-                                        <Link
-                                            to={`/hotels/${prop.id}`}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] text-white rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-[0_4px_14px_0_rgba(79,70,229,0.3)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] hover:bg-[#4338ca] active:scale-95"
-                                        >
-                                            Book This Stay <ChevronRight size={14} className="stroke-[3px]" />
-                                        </Link>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                                </motion.div>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Aura Maps Attribution */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">

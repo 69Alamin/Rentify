@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import MainLayout from './components/layout/MainLayout';
 import Home from './pages/Home';
 import Hotels from './pages/Hotels';
@@ -24,56 +25,80 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ModalProvider } from './context/ModalContext';
 import ScrollToTop from './components/ScrollToTop';
 
+// Mobile Imports
+import MobileApp from './mobile/MobileApp';
+
 function App() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <ModalProvider>
       <Router>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
-            <Route path="hotels" element={<Hotels />} />
-            <Route path="hotels/:id" element={<HotelDetails />} />
-            {/* Removed redundant public dashboard route if intended for customers only, or keep if shared? 
-                Assuming 'dashboard' is customer specific based on protection plan. 
-                If 'dashboard.jsx' is shared, we might need logic inside. 
-                But for now, I put it under customer. */ }
+          {/* Mobile UI triggered by /mobile or screen width */}
+          <Route path="/mobile/*" element={<MobileApp />} />
 
-            {/* Public/Shared */}
-            <Route path="services" element={<Services />} />
-            <Route path="about" element={<About />} />
-            <Route path="map" element={<MapExplorer />} />
-            <Route path="notifications" element={<Notifications />} />
-            {/* Authentication */}
-            <Route path="login" element={<Login />} />
-            <Route path="register" element={<Register />} />
+          {/* Main App Logic */}
+          <Route path="/*" element={
+            isMobile ? (
+              <Routes>
+                <Route path="*" element={<Navigate to="/mobile" replace />} />
+              </Routes>
+            ) : (
+              <Routes>
+                <Route path="/" element={<MainLayout />}>
+                  <Route index element={<Home />} />
+                  <Route path="hotels" element={<Hotels />} />
+                  <Route path="hotels/:id" element={<HotelDetails />} />
 
-            {/* Customer Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="history" element={<OrderHistory />} />
-              <Route path="food" element={<FoodService />} />
-              <Route path="journey" element={<AlternativeJourney />} />
-              <Route path="profile" element={<Profile />} />
-            </Route>
+                  {/* Public/Shared */}
+                  <Route path="services" element={<Services />} />
+                  <Route path="about" element={<About />} />
+                  <Route path="map" element={<MapExplorer />} />
+                  <Route path="notifications" element={<Notifications />} />
 
-            {/* Vendor Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>
-              <Route path="vendor/dashboard" element={<VendorDashboard />} />
-            </Route>
+                  {/* Authentication */}
+                  <Route path="login" element={<Login />} />
+                  <Route path="register" element={<Register />} />
 
-            {/* Admin Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-              <Route path="admin/dashboard" element={<AdminDashboard />} />
-              <Route path="admin/analytics" element={<AIAnalytics />} />
-            </Route>
+                  {/* Customer Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="history" element={<OrderHistory />} />
+                    <Route path="food" element={<FoodService />} />
+                    <Route path="journey" element={<AlternativeJourney />} />
+                    <Route path="profile" element={<Profile />} />
+                  </Route>
 
-            {/* Driver Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['driver', 'rider']} />}>
-              <Route path="driver/dashboard" element={<DriverDashboard />} />
-            </Route>
-            <Route path="*" element={<div className="h-screen flex items-center justify-center text-2xl font-bold text-secondary">404 - Page Not Found</div>} />
-          </Route>
+                  {/* Vendor Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>
+                    <Route path="vendor/dashboard" element={<VendorDashboard />} />
+                  </Route>
+
+                  {/* Admin Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                    <Route path="admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="admin/analytics" element={<AIAnalytics />} />
+                  </Route>
+
+                  {/* Driver Routes */}
+                  <Route element={<ProtectedRoute allowedRoles={['driver', 'rider']} />}>
+                    <Route path="driver/dashboard" element={<DriverDashboard />} />
+                  </Route>
+                  <Route path="*" element={<div className="h-screen flex items-center justify-center text-2xl font-bold text-secondary">404 - Page Not Found</div>} />
+                </Route>
+              </Routes>
+            )
+          } />
         </Routes>
       </Router>
     </ModalProvider>

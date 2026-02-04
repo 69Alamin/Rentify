@@ -29,6 +29,7 @@ function finalizeBooking($conn, $user_id) {
 
     if ($vehicle_type === 'motorbike') $vehicle_type = 'bike';
 
+
     // Fetch Room & Price Data
     $query = "SELECT rt.base_price_per_hour, rt.capacity, p.address as hotel_address, p.latitude as hotel_lat, p.longitude as hotel_lng, p.vendor_id, p.name as hotel_name 
               FROM room_types rt 

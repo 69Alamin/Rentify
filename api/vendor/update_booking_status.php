@@ -1,11 +1,6 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:5173');
-header('Access-Control-Allow-Credentials: true');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
+require_once __DIR__ . '/../cors.php';
+handle_cors();
 
 session_start();
 require_once __DIR__ . '/../../db_conn.php';
@@ -17,11 +12,7 @@ error_log("Session user_type: " . ($_SESSION['user_type'] ?? 'NOT SET'));
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
     error_log("Authorization failed");
-    echo json_encode(['success' => false, 'message' => 'Unauthorized', 'debug' => [
-        'has_session' => isset($_SESSION['user_id']),
-        'user_type' => $_SESSION['user_type'] ?? null
-    ]]);
-    exit();
+    send_json(['success' => false, 'message' => 'Unauthorized']);
 }
 
 $data = json_decode(file_get_contents('php://input'), true);
@@ -35,11 +26,7 @@ error_log("Vendor ID: " . $vendor_id);
 
 if (!$booking_id || !$new_status) {
     error_log("Missing parameters");
-    echo json_encode(['success' => false, 'message' => 'Missing parameters', 'debug' => [
-        'booking_id' => $booking_id,
-        'status' => $new_status
-    ]]);
-    exit();
+    send_json(['success' => false, 'message' => 'Missing parameters']);
 }
 
 // 1. Verify that this booking belongs to this vendor
@@ -57,18 +44,13 @@ error_log("Booking info: " . json_encode($booking_info));
 
 if (!$booking_info) {
     error_log("Booking not found or access denied");
-    echo json_encode(['success' => false, 'message' => 'Booking not found or access denied', 'debug' => [
-        'booking_id' => $booking_id,
-        'vendor_id' => $vendor_id
-    ]]);
-    exit();
+    send_json(['success' => false, 'message' => 'Booking not found or access denied']);
 }
 
 // Enforce final state: Cannot change status if already completed or cancelled
 if (in_array($booking_info['booking_status'], ['completed', 'cancelled'])) {
     error_log("Attempt to modify finalized booking");
-    echo json_encode(['success' => false, 'message' => 'Cannot modify a booking that is ' . $booking_info['booking_status']]);
-    exit();
+    send_json(['success' => false, 'message' => 'Cannot modify a booking that is ' . $booking_info['booking_status']]);
 }
 
 // Check for active ride requests when checking in
@@ -80,13 +62,11 @@ if ($new_status === 'active') {
     $hasActiveRide = ($rideResult && mysqli_num_rows($rideResult) > 0);
 
     if ($hasActiveRide && !$force_manual) {
-        http_response_code(409); // Conflict
-        echo json_encode([
+        send_json([
             'success' => false,
             'message' => 'Active ride found. User has an ongoing pickup request. Please cancel the ride or wait for completion before check-in.',
             'has_active_ride' => true
-        ]);
-        exit();
+        ], 409);
     }
 
     if ($force_manual && $hasActiveRide) {
@@ -99,8 +79,7 @@ if ($new_status === 'active') {
     $activeCheckSql = "SELECT id FROM bookings WHERE user_id = ? AND booking_status = 'active' AND id != ?";
     $activeCheckRes = db_query($activeCheckSql, 'ii', [$guest_id, $booking_id]);
     if ($activeCheckRes && mysqli_num_rows($activeCheckRes) > 0) {
-        echo json_encode(['success' => false, 'message' => 'Guest already has an active stay elsewhere. They must check out of their current stay first.']);
-        exit();
+        send_json(['success' => false, 'message' => 'Guest already has an active stay elsewhere. They must check out of their current stay first.']);
     }
 }
 
@@ -143,9 +122,9 @@ if ($update_result) {
         }
     }
 
-    echo json_encode(['success' => true, 'message' => 'Booking status updated and user notified']);
+    send_json(['success' => true, 'message' => 'Booking status updated and user notified']);
 } else {
     error_log("Failed to update booking status - database error");
-    echo json_encode(['success' => false, 'message' => 'Failed to update booking status']);
+    send_json(['success' => false, 'message' => 'Failed to update booking status']);
 }
 ?>

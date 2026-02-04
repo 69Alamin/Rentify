@@ -102,6 +102,10 @@ const HotelDetails = () => {
                     src={getImageUrl(hotel.image_url)}
                     alt={hotel.name}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                        console.error(`Failed to load hero image:`, hotel.image_url);
+                        e.target.src = '/assets/default_hotel.png';
+                    }}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/40 to-transparent flex items-end">
                     <div className="container mx-auto px-6 pb-20 text-white">
