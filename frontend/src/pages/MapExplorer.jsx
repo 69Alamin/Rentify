@@ -132,7 +132,7 @@ const RoutingMachine = ({ userLocation, destination, onRouteUpdate }) => {
     return null;
 };
 
-const MapExplorer = ({ isMobile = false }) => {
+const MapExplorer = () => {
     const { showSuccess, showError, showConfirm } = useModal();
     const [hotels, setHotels] = useState([]);
     const [activeHotel, setActiveHotel] = useState(null);
@@ -142,6 +142,8 @@ const MapExplorer = ({ isMobile = false }) => {
     const [mapCenter, setMapCenter] = useState([23.7771, 90.3994]); // Default Dhaka
     const [destination, setDestination] = useState(null);
     const [routeInfo, setRouteInfo] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeTag, setActiveTag] = useState('');
 
     useEffect(() => {
         // Check for destination & start in URL params
@@ -238,7 +240,6 @@ const MapExplorer = ({ isMobile = false }) => {
                         longitude: parseFloat(p.longitude)
                     }));
                     setHotels(validProps);
-                    console.log("Valid hotels loaded:", validProps);
                 } else {
                     setError('Failed to load map data');
                 }
@@ -297,6 +298,54 @@ const MapExplorer = ({ isMobile = false }) => {
         });
     };
 
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const getMatchScore = (hotel) => {
+        if (!normalizedQuery) return 0;
+        const name = (hotel.name || '').toLowerCase();
+        const address = (hotel.address || '').toLowerCase();
+        const type = (hotel.hotel_type || '').toLowerCase();
+
+        if (name.startsWith(normalizedQuery)) return 0;
+        if (name.includes(normalizedQuery)) return 1;
+        if (address.includes(normalizedQuery)) return 2;
+        if (type.includes(normalizedQuery)) return 3;
+        return 4;
+    };
+
+    const filteredHotels = hotels
+        .filter((hotel) => {
+            const matchesQuery = !normalizedQuery ||
+                (hotel.name || '').toLowerCase().includes(normalizedQuery) ||
+                (hotel.address || '').toLowerCase().includes(normalizedQuery) ||
+                (hotel.hotel_type || '').toLowerCase().includes(normalizedQuery);
+
+            const rating = parseFloat(hotel.rating || 0);
+            const hasFacility = (field) => {
+                const value = hotel[field];
+                const result = value == 1 || value === '1' || value === true;
+                return result;
+            };
+
+            const matchesTag = !activeTag || (
+                (activeTag === 'Top Rated' && rating >= 4.5) ||
+                (activeTag === 'WiFi' && hasFacility('has_wifi')) ||
+                (activeTag === 'AC' && hasFacility('has_ac')) ||
+                (activeTag === 'Pool' && hasFacility('has_pool')) ||
+                (activeTag === 'Parking' && hasFacility('has_parking')) ||
+                (activeTag === 'Restaurant' && hasFacility('has_restaurant')) ||
+                (activeTag === 'Gym' && hasFacility('has_gym')) ||
+                (activeTag === 'Elevator' && hasFacility('has_elevator')) ||
+                (activeTag === 'Laundry' && hasFacility('has_laundry'))
+            );
+
+            return matchesQuery && matchesTag;
+        })
+        .sort((a, b) => {
+            const scoreDiff = getMatchScore(a) - getMatchScore(b);
+            if (scoreDiff !== 0) return scoreDiff;
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
     if (loading) return (
         <div className="flex h-screen items-center justify-center pt-20">
             <Loader className="animate-spin text-primary" size={30} />
@@ -310,7 +359,7 @@ const MapExplorer = ({ isMobile = false }) => {
     );
 
     return (
-        <div className={`w-full h-screen relative bg-gray-100 overflow-hidden ${isMobile ? 'pt-0' : 'pt-20'}`}>
+        <div className="w-full h-screen relative bg-gray-100 overflow-hidden pt-20">
             {/* Map Container - Full Screen Background */}
             <div className="absolute inset-0 z-0">
                 <MapContainer
@@ -344,7 +393,7 @@ const MapExplorer = ({ isMobile = false }) => {
                     )}
 
                     {/* Property Markers */}
-                    {hotels.map((location) => (
+                    {filteredHotels.map((location) => (
                         <Marker
                             key={location.id}
                             position={[parseFloat(location.latitude), parseFloat(location.longitude)]}
@@ -369,7 +418,7 @@ const MapExplorer = ({ isMobile = false }) => {
                                             <span className="text-[10px] text-gray-400 font-medium">({location.review_count || '120+'})</span>
                                         </div>
                                         <Link
-                                            to={isMobile ? `/mobile/hotels/${location.id}` : `/hotels/${location.id}`}
+                                            to={`/hotels/${location.id}`}
                                             className="flex items-center justify-center gap-2 w-full text-center py-4 bg-[#4f46e5] text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-lg shadow-indigo-300/50 hover:bg-[#4338ca] hover:scale-[1.05] hover:shadow-indigo-400/60 active:scale-95"
                                         >
                                             Book This Stay <ChevronRight size={14} className="stroke-[3px]" />
@@ -383,7 +432,7 @@ const MapExplorer = ({ isMobile = false }) => {
             </div>
 
             {/* Google-Style Floating Search Pill */}
-            <div className={`absolute ${isMobile ? 'top-6' : 'top-24'} left-6 z-[1005] w-full max-w-sm pointer-events-none`}>
+            <div className="absolute top-24 left-6 z-[1005] w-full max-w-sm pointer-events-none">
                 <div className="pointer-events-auto bg-white rounded-full shadow-google-pill border border-gray-100 p-2 flex items-center gap-2">
                     <div className="w-10 h-10 flex items-center justify-center text-[#1a73e8]">
                         <Search size={20} />
@@ -391,15 +440,31 @@ const MapExplorer = ({ isMobile = false }) => {
                     <input
                         type="text"
                         placeholder="Search hotels or areas..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && filteredHotels[0]) handleHotelSelect(filteredHotels[0]);
+                        }}
                         className="flex-grow bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 placeholder-gray-400"
                     />
-                    <div className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-[#1a73e8] cursor-pointer transition-colors">
+                    <div
+                        onClick={() => { if (filteredHotels[0]) handleHotelSelect(filteredHotels[0]); }}
+                        className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-400 hover:text-[#1a73e8] cursor-pointer transition-colors"
+                        title="Go to first result"
+                    >
                         <MapPin size={18} />
                     </div>
                 </div>
                 <div className="mt-3 flex gap-2 pointer-events-auto px-1 overflow-x-auto no-scrollbar">
-                    {['Top Rated', 'Pool', 'Free WiFi', 'AC'].map(tag => (
-                        <button key={tag} className="bg-white px-4 py-1.5 rounded-full shadow-sm text-[11px] font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
+                    {['Top Rated', 'WiFi', 'AC', 'Pool', 'Parking', 'Restaurant', 'Gym', 'Elevator', 'Laundry'].map(tag => (
+                        <button
+                            key={tag}
+                            onClick={() => setActiveTag(prev => (prev === tag ? '' : tag))}
+                            className={`px-4 py-1.5 rounded-full shadow-sm text-[11px] font-bold border whitespace-nowrap ${activeTag === tag
+                                ? 'bg-[#1a73e8] text-white border-[#1a73e8]'
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                }`}
+                        >
                             {tag}
                         </button>
                     ))}
@@ -407,13 +472,13 @@ const MapExplorer = ({ isMobile = false }) => {
             </div>
 
             {/* Floating Hotel Sheet (Left Edge) */}
-            {!isMobile && (
+            {(
                 <div className={`absolute top-52 left-6 bottom-10 w-full md:w-[380px] pointer-events-none z-[1002] transition-all duration-500 ${destination ? '-translate-x-[450px] opacity-0' : 'translate-x-0 opacity-100'}`}>
                     <div className="h-full flex flex-col pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-google-sheet border border-gray-100 overflow-hidden">
                         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                             <div>
                                 <h2 className="text-lg font-black text-secondary tracking-tight">Stay Explorer</h2>
-                                <p className="text-[10px] uppercase tracking-widest text-[#1a73e8] font-bold mt-0.5">{hotels.length} verified stays</p>
+                                <p className="text-[10px] uppercase tracking-widest text-[#1a73e8] font-bold mt-0.5">{filteredHotels.length} verified stays</p>
                             </div>
                             <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400">
                                 <Filter size={14} />
@@ -421,7 +486,7 @@ const MapExplorer = ({ isMobile = false }) => {
                         </div>
 
                         <div className="flex-grow overflow-y-auto custom-scrollbar p-3 space-y-2 bg-gray-50/30">
-                            {hotels.map((prop, idx) => (
+                            {filteredHotels.map((prop, idx) => (
                                 <motion.div
                                     key={prop.id}
                                     initial={{ y: 20, opacity: 0 }}
@@ -448,7 +513,7 @@ const MapExplorer = ({ isMobile = false }) => {
                                         <div className="flex items-center justify-between mt-1">
                                             <span className="text-xs font-black text-[#3c4043]">৳{prop.price_per_hour}<span className="opacity-40 font-bold ml-1">/hr</span></span>
                                             <Link
-                                                to={isMobile ? `/mobile/hotels/${prop.id}` : `/hotels/${prop.id}`}
+                                                to={`/hotels/${prop.id}`}
                                                 onClick={(e) => e.stopPropagation()}
                                                 className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] text-white rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-[0_4px_14px_0_rgba(79,70,229,0.3)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] hover:bg-[#4338ca] active:scale-95"
                                             >

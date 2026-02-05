@@ -6,6 +6,23 @@
 
 class TransactionHelper {
     private static $commission_rate = 0.10; // 10% Platform fee
+    private static $wallet_column = null;
+
+    private static function getWalletColumn($conn) {
+        if (self::$wallet_column !== null) return self::$wallet_column;
+
+        $col_res = mysqli_query($conn, "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('wallet_balance','balance')");
+        $cols = [];
+        if ($col_res) {
+            while ($c = mysqli_fetch_assoc($col_res)) { $cols[] = $c['COLUMN_NAME']; }
+        }
+
+        if (in_array('wallet_balance', $cols, true)) self::$wallet_column = 'wallet_balance';
+        elseif (in_array('balance', $cols, true)) self::$wallet_column = 'balance';
+        else self::$wallet_column = null;
+
+        return self::$wallet_column;
+    }
 
     /**
      * Records a movement of funds and updates user balance.
@@ -32,7 +49,12 @@ class TransactionHelper {
         }
 
         // 2. Update user's wallet balance
-        $update_sql = "UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?";
+        $wallet_col = self::getWalletColumn($conn);
+        if (!$wallet_col) {
+            error_log("Wallet balance column not found in users table");
+            return false;
+        }
+        $update_sql = "UPDATE users SET {$wallet_col} = {$wallet_col} + ? WHERE id = ?";
         $up_stmt = mysqli_prepare($conn, $update_sql);
         mysqli_stmt_bind_param($up_stmt, 'di', $amount, $user_id);
         

@@ -1,3 +1,4 @@
+<?php
 require_once __DIR__ . '/../cors.php';
 handle_cors();
 
@@ -121,12 +122,24 @@ try {
     $room_id = $room['id'];
     mysqli_stmt_close($stmt_room);
 
-    // 0. Check User Balance
+    // 0. Check User Balance (support wallet_balance or balance columns)
     require_once __DIR__ . '/../helpers/TransactionHelper.php';
-    $user_res = db_query("SELECT wallet_balance FROM users WHERE id = ?", 'i', [$user_id]);
-    $user_wallet = mysqli_fetch_assoc($user_res);
-    if ($user_wallet['wallet_balance'] < $total_price) {
-        throw new Exception('Insufficient wallet balance. Total required: ৳' . $total_price);
+    $wallet_col = null;
+    $col_res = db_query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('wallet_balance','balance')");
+    if ($col_res) {
+        $cols = [];
+        while ($c = mysqli_fetch_assoc($col_res)) { $cols[] = $c['COLUMN_NAME']; }
+        if (in_array('wallet_balance', $cols, true)) $wallet_col = 'wallet_balance';
+        elseif (in_array('balance', $cols, true)) $wallet_col = 'balance';
+    }
+
+    if ($wallet_col) {
+        $user_res = db_query("SELECT {$wallet_col} AS wallet_balance FROM users WHERE id = ?", 'i', [$user_id]);
+        $user_wallet = $user_res ? mysqli_fetch_assoc($user_res) : null;
+        $current_balance = (float)($user_wallet['wallet_balance'] ?? 0);
+        if ($current_balance < $total_price) {
+            throw new Exception('Insufficient wallet balance. Total required: ৳' . $total_price);
+        }
     }
 
     // Fetch Vendor ID for transaction

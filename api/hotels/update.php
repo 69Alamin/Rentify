@@ -94,7 +94,7 @@ $params = [
     $id, $_SESSION['user_id']
 ];
 
-$types = 'ssssssssssssiiiiiiiiiiiddii';
+$types = 'ssssssssssssiiiiiiiiiiddii';
 
 $updated = db_query($sql, $types, $params);
 

@@ -1,5 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainLayout from './components/layout/MainLayout';
 import Home from './pages/Home';
 import Hotels from './pages/Hotels';
@@ -25,38 +24,15 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ModalProvider } from './context/ModalContext';
 import ScrollToTop from './components/ScrollToTop';
 
-// Mobile Imports
-import MobileApp from './mobile/MobileApp';
 
 function App() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   return (
     <ModalProvider>
       <Router>
         <ScrollToTop />
         <Routes>
-          {/* Mobile UI triggered by /mobile or screen width */}
-          <Route path="/mobile/*" element={<MobileApp />} />
-
-          {/* Main App Logic */}
-          <Route path="/*" element={
-            isMobile ? (
-              <Routes>
-                <Route path="*" element={<Navigate to="/mobile" replace />} />
-              </Routes>
-            ) : (
-              <Routes>
-                <Route path="/" element={<MainLayout />}>
-                  <Route index element={<Home />} />
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Home />} />
                   <Route path="hotels" element={<Hotels />} />
                   <Route path="hotels/:id" element={<HotelDetails />} />
 
@@ -95,14 +71,11 @@ function App() {
                     <Route path="driver/dashboard" element={<DriverDashboard />} />
                   </Route>
                   <Route path="*" element={<div className="h-screen flex items-center justify-center text-2xl font-bold text-secondary">404 - Page Not Found</div>} />
-                </Route>
-              </Routes>
-            )
-          } />
-        </Routes>
-      </Router>
-    </ModalProvider>
-  );
-}
+            </Route>
+          </Routes>
+        </Router>
+      </ModalProvider>
+    );
+  }
 
 export default App;
