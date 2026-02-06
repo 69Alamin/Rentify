@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Navigation, Loader, AlertCircle, CheckCircle, Search, ChevronLeft, ChevronRight, Car, Bike, User } from 'lucide-react';
+import { MapPin, Navigation, Loader, AlertCircle, CheckCircle, Search, ChevronLeft, ChevronRight, Car, Bike, User, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import EmbeddedNavigation from "../../components/EmbeddedNavigation.jsx";
 
 const MobileAlternativeJourney = () => {
     const navigate = useNavigate();
@@ -20,6 +21,7 @@ const MobileAlternativeJourney = () => {
     const [distance, setDistance] = useState(null);
     const [estimatedFare, setEstimatedFare] = useState(null);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [showNavigation, setShowNavigation] = useState(false);
 
     useEffect(() => {
         getCurrentLocation();
@@ -364,13 +366,21 @@ const MobileAlternativeJourney = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-3">
-                                        <a href={`tel:${activeRide.driver_phone}`} className="flex-1 bg-white text-indigo-900 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">
-                                            Call Driver
-                                        </a>
-                                        <button className="flex-1 bg-indigo-500/20 text-white border border-white/20 py-3 rounded-xl font-black text-xs uppercase tracking-widest">
-                                            Message
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={() => setShowNavigation(true)}
+                                            className="w-full bg-accent text-navy py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg flex items-center justify-center gap-2"
+                                        >
+                                            <Navigation size={14} /> Track Rider
                                         </button>
+                                        <div className="flex gap-3">
+                                            <a href={`tel:${activeRide.driver_phone}`} className="flex-1 bg-white text-indigo-900 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg text-center">
+                                                Call Driver
+                                            </a>
+                                            <button className="flex-1 bg-indigo-500/20 text-white border border-white/20 py-3 rounded-xl font-black text-xs uppercase tracking-widest">
+                                                Message
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -394,6 +404,23 @@ const MobileAlternativeJourney = () => {
                                 </div>
                             </div>
                         </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                    {showNavigation && activeRide && (
+                        <EmbeddedNavigation
+                            pickupLat={activeRide.pickup_lat}
+                            pickupLng={activeRide.pickup_lng}
+                            dropoffLat={activeRide.destination_lat}
+                            dropoffLng={activeRide.destination_lng}
+                            navigationType={activeRide.status === 'picked_up' ? 'dropoff' : 'pickup'}
+                            customerName={activeRide.driver_name}
+                            onClose={() => setShowNavigation(false)}
+                            isMobile={true}
+                            remoteOrigin={activeRide.driver_lat ? [parseFloat(activeRide.driver_lat), parseFloat(activeRide.driver_lng)] : null}
+                            isCustomerView={true}
+                        />
                     )}
                 </AnimatePresence>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building, Plus, Calendar, Settings, MapPin, DollarSign, Image as ImageIcon, Loader, Users, CheckCircle, XCircle, AlertTriangle, Phone, Mail, Clock, Wifi, Car, Wind, Dumbbell, Waves, ShoppingBag, Home, TrendingUp } from 'lucide-react';
+import { Building, Plus, Calendar, Settings, MapPin, DollarSign, Image as ImageIcon, Loader, Users, CheckCircle, XCircle, AlertTriangle, Phone, Mail, Clock, Wifi, Car, Wind, Dumbbell, Waves, ShoppingBag, Home, TrendingUp, MessageCircle } from 'lucide-react';
+import ChatModal from '../mobile/components/ChatModal.jsx';
 import { motion } from 'framer-motion';
 import { useModal } from '../context/ModalContext';
 
@@ -18,6 +19,7 @@ const VendorDashboard = () => {
     const [stats, setStats] = useState({ total_earnings: 0, pending_payouts: 0 });
     const [estimateTimes, setEstimateTimes] = useState({}); // Track estimate time input for each order
     const [bookingFilter, setBookingFilter] = useState('all'); // 'all', 'pending', 'active', 'completed'
+    const [chatTarget, setChatTarget] = useState(null); // { id, name, contextId, contextType }
 
     // Add Room Type Form State
     const [roomTypeData, setRoomTypeData] = useState({ hotel_id: '', name: '', price: '', capacity: '2' });
@@ -80,29 +82,41 @@ const VendorDashboard = () => {
         }
         fetchData();
 
-        // Polling for food orders
+        // Polling for real-time updates (Bookings & Food)
         const interval = setInterval(() => {
-            // Only polling food orders to reduce load, or just refetch all if simple
-            // Refetching food orders specifically if we are on that tab would be better, but let's just refetch all lightly or specific endpoint?
-            // To be safe and simple, let's just call fetchData() but only if activeTab is food to avoid flicker on other tabs if heavy.
-            // Actually, the user asked for "real time" feel.
-            if (activeTab === 'food') {
-                fetch('/api/food/order.php', { credentials: 'include' })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
+            const checkUpdates = async () => {
+                try {
+                    // Update Bookings
+                    const bookRes = await fetch('/api/vendor/bookings.php', { credentials: 'include' });
+                    const bookData = await bookRes.json();
+                    if (bookData.success) {
+                        setBookings(prev => {
+                            const newPendings = bookData.data.filter(b => b.booking_status === 'pending');
+                            const oldPendings = prev.filter(b => b.booking_status === 'pending');
+
+                            if (newPendings.length > oldPendings.length) {
+                                new Audio('/assets/sounds/notification.mp3').play().catch(e => console.log('Audio play failed', e));
+                            }
+                            return bookData.data;
+                        });
+                    }
+
+                    // Update Food if needed
+                    if (activeTab === 'food') {
+                        const foodRes = await fetch('/api/food/order.php', { credentials: 'include' });
+                        const foodData = await foodRes.json();
+                        if (foodData.success) {
                             setFoodOrders(prev => {
-                                // Check for new orders to play sound
-                                if (data.data.length > prev.length) {
-                                    // Play sound
-                                    const audio = new Audio('/assets/sounds/notification.mp3');
-                                    audio.play().catch(e => console.log('Audio play failed', e));
+                                if (foodData.data.length > prev.length) {
+                                    new Audio('/assets/sounds/notification.mp3').play().catch(e => console.log('Audio play failed', e));
                                 }
-                                return data.data;
+                                return foodData.data;
                             });
                         }
-                    });
-            }
+                    }
+                } catch (e) { console.error('Real-time sync error', e); }
+            };
+            checkUpdates();
         }, 5000); // 5 seconds polling
 
         return () => clearInterval(interval);
@@ -488,7 +502,7 @@ const VendorDashboard = () => {
                                 <DollarSign className="text-primary w-5 h-5" />
                             </div>
                             <div>
-                                <div className="text-gray-500 font-black text-[8px] uppercase tracking-widest leading-none mb-1">Wallet</div>
+                                <div className="text-gray-500 font-black text-xs uppercase tracking-widest leading-none mb-1">Wallet</div>
                                 <div className="text-white font-black text-lg italic leading-none">৳{user?.balance?.toLocaleString() || '0'}</div>
                             </div>
                         </motion.div>
@@ -501,7 +515,7 @@ const VendorDashboard = () => {
                                 <TrendingUp className="text-emerald-400 w-5 h-5" />
                             </div>
                             <div>
-                                <div className="text-gray-500 font-black text-[8px] uppercase tracking-widest leading-none mb-1">Net Earnings (90%)</div>
+                                <div className="text-gray-500 font-black text-xs uppercase tracking-widest leading-none mb-1">Net Earnings (90%)</div>
                                 <div className="text-emerald-400 font-black text-lg italic leading-none">৳{(stats?.total_earnings || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                             </div>
                         </motion.div>
@@ -715,21 +729,21 @@ const VendorDashboard = () => {
                                             {bookings.length}
                                         </span>
                                     </div>
-                                    <div className="text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] relative z-10">Total Registry</div>
+                                    <div className="text-gray-400 font-black text-xs uppercase tracking-[0.2em] relative z-10">Total Registry</div>
                                 </motion.div>
 
 
                             </div>
 
-                            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-x-auto">
                                 <table className="w-full">
                                     <thead className="bg-gray-50 border-b border-gray-100">
                                         <tr>
-                                            <th className="text-left p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Hotel</th>
-                                            <th className="text-left p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Guest</th>
-                                            <th className="text-left p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Schedule</th>
-                                            <th className="text-left p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Status</th>
-                                            <th className="text-right p-6 text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Economics</th>
+                                            <th className="text-left p-6 text-xs font-black text-gray-500 uppercase tracking-widest leading-none">Hotel</th>
+                                            <th className="text-left p-6 text-xs font-black text-gray-500 uppercase tracking-widest leading-none">Guest</th>
+                                            <th className="text-left p-6 text-xs font-black text-gray-500 uppercase tracking-widest leading-none">Schedule</th>
+                                            <th className="text-left p-6 text-xs font-black text-gray-500 uppercase tracking-widest leading-none">Status</th>
+                                            <th className="text-right p-6 text-xs font-black text-gray-500 uppercase tracking-widest leading-none">Economics</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
@@ -749,7 +763,7 @@ const VendorDashboard = () => {
                                                         <div className="text-sm">{new Date(b.check_in_time).toLocaleDateString()}</div>
                                                         <div className="text-xs text-gray-400 text-sm mb-1">{b.total_hours} hr stay</div>
                                                         {parseInt(b.is_emergency) === 1 && (
-                                                            <div className="flex items-center gap-1 text-[10px] bg-red-500 text-white px-2 py-0.5 rounded uppercase font-black tracking-wider w-fit animate-pulse">
+                                                            <div className="flex items-center gap-1 text-xs bg-red-500 text-white px-2 py-0.5 rounded uppercase font-black tracking-wider w-fit animate-pulse">
                                                                 <AlertTriangle size={10} /> Emergency
                                                             </div>
                                                         )}
@@ -799,6 +813,18 @@ const VendorDashboard = () => {
                                                                     Check Out
                                                                 </button>
                                                             )}
+                                                            <button
+                                                                onClick={() => setChatTarget({
+                                                                    id: b.user_id,
+                                                                    name: b.user_name,
+                                                                    contextId: b.id,
+                                                                    contextType: 'hotel'
+                                                                })}
+                                                                className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                                                title="Message Guest"
+                                                            >
+                                                                <MessageCircle size={16} />
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -906,7 +932,7 @@ const VendorDashboard = () => {
                                             </td>
                                             <td className="p-4 font-bold text-primary">৳{order.total_amount}</td>
                                             <td className="p-4">
-                                                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                                <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                                                     order.status === 'accepted' || order.status === 'cooking' ? 'bg-blue-100 text-blue-700' :
                                                         order.status === 'ready' ? 'bg-purple-100 text-purple-700' :
                                                             order.status === 'delivered' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
@@ -955,6 +981,18 @@ const VendorDashboard = () => {
                                                             Complete
                                                         </button>
                                                     )}
+                                                    <button
+                                                        onClick={() => setChatTarget({
+                                                            id: order.user_id,
+                                                            name: order.user_name,
+                                                            contextId: order.id,
+                                                            contextType: 'food'
+                                                        })}
+                                                        className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                                        title="Message Guest"
+                                                    >
+                                                        <MessageCircle size={14} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -1321,6 +1359,15 @@ const VendorDashboard = () => {
                     )
                 }
             </div >
+
+            <ChatModal
+                isOpen={!!chatTarget}
+                onClose={() => setChatTarget(null)}
+                otherUserId={chatTarget?.id}
+                otherUserName={chatTarget?.name}
+                contextId={chatTarget?.contextId}
+                contextType={chatTarget?.contextType}
+            />
         </div >
     );
 };

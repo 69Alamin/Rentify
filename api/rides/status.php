@@ -43,8 +43,13 @@ if ($user_type === 'driver' || $user_type === 'rider') {
     $sql = "UPDATE journey_requests SET status = ? WHERE id = ?";
     $params = [$status, $ride_id];
     $types = 'si';
+} elseif ($user_type === 'customer' && $status === 'cancelled') {
+    // Customers can only cancel their own ride if it hasn't been accepted yet
+    $sql = "UPDATE journey_requests SET status = 'cancelled' WHERE id = ? AND user_id = ? AND status = 'requested'";
+    $params = [$ride_id, $user_id];
+    $types = 'ii';
 } else {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized to update status']);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized or invalid status transition']);
     exit();
 }
 

@@ -62,7 +62,7 @@ function normalize_booking_image($raw, $hotel_id, $baseUrl, $defaultImage) {
 $sql = "SELECT b.id, b.check_in_time, b.check_out_time, b.total_hours, b.total_price, b.booking_status, b.created_at, b.room_id,
                r.room_number, 
                rt.name AS room_type_name, 
-               p.id AS hotel_id,
+               p.id AS hotel_id, p.vendor_id,
                p.name AS hotel_name, p.image_url, p.latitude, p.longitude,
                (SELECT COUNT(*) FROM hotel_reviews WHERE booking_id = b.id) > 0 as reviewed
         FROM bookings b

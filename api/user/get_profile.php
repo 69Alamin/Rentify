@@ -11,11 +11,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 session_start();
 require_once __DIR__ . '/../../db_conn.php';
 
-// Ensure missing columns exist (reset script omits total_earnings)
-$checkCol = db_query("SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'total_earnings'");
-if ($checkCol && ($rowCol = mysqli_fetch_assoc($checkCol)) && intval($rowCol['c']) === 0) {
-    db_query("ALTER TABLE users ADD COLUMN total_earnings DECIMAL(12,2) DEFAULT 0");
-}
+// Header and session already set up above
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);

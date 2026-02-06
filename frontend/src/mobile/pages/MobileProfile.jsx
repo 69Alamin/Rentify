@@ -134,6 +134,7 @@ const MobileProfile = () => {
     const menuItems = [
         { icon: User, label: 'Personal Information', sub: 'Edit your details', action: () => setShowEditProfile(true) },
         { icon: Shield, label: 'Security', sub: 'Change Password', action: () => setShowChangePassword(true) },
+        { icon: Shield, label: 'Trust Center', sub: 'Verify your identity', action: () => navigate('/trust-center') },
     ];
 
     const supportItems = [

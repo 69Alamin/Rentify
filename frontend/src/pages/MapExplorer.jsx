@@ -133,7 +133,7 @@ const RoutingMachine = ({ userLocation, destination, onRouteUpdate }) => {
 };
 
 const MapExplorer = () => {
-    const { showSuccess, showError, showConfirm } = useModal();
+    const { showSuccess, showError, showConfirm, setHeaderHidden } = useModal();
     const [hotels, setHotels] = useState([]);
     const [activeHotel, setActiveHotel] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -165,16 +165,9 @@ const MapExplorer = () => {
             const startCoords = [parseFloat(sLat), parseFloat(sLng)];
             setUserLocation(startCoords);
             setMapCenter(startCoords);
-        } else if (navigator.geolocation && !userLocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setUserLocation([latitude, longitude]);
-                    if (!lat) setMapCenter([latitude, longitude]);
-                },
-                () => console.log('Could not get location'),
-                { enableHighAccuracy: true }
-            );
+        } else {
+            // Initial geolocation attempts
+            requestLocation(true); // Try high accuracy first
         }
 
         // Live Track Feature for specific Ride
@@ -224,7 +217,12 @@ const MapExplorer = () => {
             }
         }, 3000);
 
-        return () => { if (interval) clearInterval(interval); clearInterval(checkInterval); setRouteInfo(null); };
+        return () => {
+            if (interval) clearInterval(interval);
+            clearInterval(checkInterval);
+            setRouteInfo(null);
+            setHeaderHidden(false); // Reset on unmount
+        };
     }, []);
 
     useEffect(() => {
@@ -251,22 +249,43 @@ const MapExplorer = () => {
         };
 
         fetchHotels();
-
-        // 2. Get User Location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setUserLocation([latitude, longitude]);
-                    setMapCenter([latitude, longitude]);
-                },
-                (err) => {
-                    console.error("Geolocation denied or error:", err);
-                    // Fallback to default center or stay
-                }
-            );
-        }
     }, []);
+
+    const requestLocation = (highAccuracy = true) => {
+        if (!navigator.geolocation) {
+            console.error("Geolocation is not supported");
+            return;
+        }
+
+        const options = {
+            enableHighAccuracy: highAccuracy,
+            timeout: 10000,
+            maximumAge: 0
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserLocation([latitude, longitude]);
+                // Only center map if it's the initial call (no destination set yet)
+                const params = new URLSearchParams(window.location.search);
+                if (!params.get('lat')) {
+                    setMapCenter([latitude, longitude]);
+                }
+            },
+            (err) => {
+                console.warn(`Geolocation error (${err.code}): ${err.message}`);
+                // If high accuracy failed, try standard accuracy
+                if (highAccuracy && (err.code === 3 || err.code === 1)) {
+                    console.log("Retrying with standard accuracy...");
+                    requestLocation(false);
+                } else {
+                    console.error("Geolocation failed significantly:", err);
+                }
+            },
+            options
+        );
+    };
 
     const getImageUrl = (url) => {
         if (!url || url === 'assets/default_property.jpg') return '/assets/default_hotel.png';
@@ -275,18 +294,44 @@ const MapExplorer = () => {
     };
 
     const handleCenterOnUser = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setUserLocation([latitude, longitude]);
-                    setMapCenter([latitude, longitude]);
-                },
-                () => showError('Could not get your location')
-            );
-        } else {
+        if (!navigator.geolocation) {
             showError('Geolocation is not supported by your browser');
+            return;
         }
+
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 7000,
+            maximumAge: 0
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserLocation([latitude, longitude]);
+                setMapCenter([latitude, longitude]);
+            },
+            (err) => {
+                let msg = 'Could not get your location';
+                if (err.code === 1) msg = 'Location permission denied. Please enable it in your browser settings.';
+                else if (err.code === 2) msg = 'Location information is unavailable.';
+                else if (err.code === 3) {
+                    // Timeout with high accuracy, retry with low
+                    navigator.geolocation.getCurrentPosition(
+                        (p) => {
+                            const { latitude, longitude } = p.coords;
+                            setUserLocation([latitude, longitude]);
+                            setMapCenter([latitude, longitude]);
+                        },
+                        () => showError('Location request timed out.'),
+                        { enableHighAccuracy: false, timeout: 5000 }
+                    );
+                    return;
+                }
+                showError(msg);
+            },
+            options
+        );
     };
 
     const handleHotelSelect = (hotel) => {
@@ -296,6 +341,7 @@ const MapExplorer = () => {
             coords: [hotel.latitude, hotel.longitude],
             label: hotel.name
         });
+        setHeaderHidden(true);
     };
 
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -419,9 +465,9 @@ const MapExplorer = () => {
                                         </div>
                                         <Link
                                             to={`/hotels/${location.id}`}
-                                            className="flex items-center justify-center gap-2 w-full text-center py-4 bg-[#4f46e5] text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-lg shadow-indigo-300/50 hover:bg-[#4338ca] hover:scale-[1.05] hover:shadow-indigo-400/60 active:scale-95"
+                                            className="flex items-center justify-center gap-2 w-full text-center py-4 bg-[#4f46e5] !text-white rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 shadow-lg shadow-indigo-500/30 hover:bg-[#4338ca] hover:scale-[1.02] active:scale-95 whitespace-nowrap"
                                         >
-                                            Book This Stay <ChevronRight size={14} className="stroke-[3px]" />
+                                            BOOK <ChevronRight size={14} className="stroke-[4px]" />
                                         </Link>
                                     </div>
                                 </div>
@@ -473,7 +519,7 @@ const MapExplorer = () => {
 
             {/* Floating Hotel Sheet (Left Edge) */}
             {(
-                <div className={`absolute top-52 left-6 bottom-10 w-full md:w-[380px] pointer-events-none z-[1002] transition-all duration-500 ${destination ? '-translate-x-[450px] opacity-0' : 'translate-x-0 opacity-100'}`}>
+                <div className={`absolute top-52 left-6 bottom-10 w-full md:w-[380px] pointer-events-none z-[1010] transition-all duration-500 ${destination ? '-translate-x-[450px] opacity-0' : 'translate-x-0 opacity-100'}`}>
                     <div className="h-full flex flex-col pointer-events-auto bg-white/95 backdrop-blur-xl rounded-3xl shadow-google-sheet border border-gray-100 overflow-hidden">
                         <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                             <div>
@@ -493,16 +539,16 @@ const MapExplorer = () => {
                                     animate={{ y: 0, opacity: 1 }}
                                     transition={{ delay: idx * 0.03 }}
                                     onClick={() => handleHotelSelect(prop)}
-                                    className={`group rounded-2xl border transition-all duration-300 cursor-pointer p-3 flex gap-4 ${activeHotel?.id === prop.id
-                                        ? 'bg-blue-50 border-blue-200'
-                                        : 'bg-white border-transparent hover:bg-gray-50'
+                                    className={`group relative rounded-2xl border transition-all duration-300 cursor-pointer p-3 flex gap-4 ${activeHotel?.id === prop.id
+                                        ? 'bg-blue-50 border-blue-200 z-10'
+                                        : 'bg-white border-transparent hover:bg-gray-50 z-0'
                                         }`}
                                 >
                                     <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
                                         <img src={getImageUrl(prop.image_url)} alt={prop.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className="flex flex-col justify-between flex-grow">
-                                        <div>
+                                    <div className="flex flex-col justify-between flex-grow min-w-0">
+                                        <div className="flex-grow">
                                             <h3 className="font-bold text-sm text-secondary line-clamp-1 group-hover:text-[#1a73e8]">{prop.name}</h3>
                                             <div className="flex items-center gap-1 mt-0.5">
                                                 <Star size={10} className="fill-yellow-400 text-yellow-400" />
@@ -510,14 +556,14 @@ const MapExplorer = () => {
                                             </div>
                                             <p className="text-[10px] text-gray-400 mt-1 truncate">{prop.address}</p>
                                         </div>
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className="text-xs font-black text-[#3c4043]">৳{prop.price_per_hour}<span className="opacity-40 font-bold ml-1">/hr</span></span>
+                                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-50/50">
+                                            <span className="text-xs font-black text-[#3c4043] whitespace-nowrap">৳{prop.price_per_hour}<span className="opacity-40 font-bold ml-1">/hr</span></span>
                                             <Link
                                                 to={`/hotels/${prop.id}`}
                                                 onClick={(e) => e.stopPropagation()}
-                                                className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] text-white rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-[0_4px_14px_0_rgba(79,70,229,0.3)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.4)] hover:bg-[#4338ca] active:scale-95"
+                                                className="flex items-center gap-1.5 px-4 py-2 bg-[#4f46e5] !text-white rounded-full text-[11px] font-black uppercase tracking-widest transition-all duration-300 shadow-[0_4px_14px_0_rgba(79,70,229,0.3)] hover:shadow-[0_6px_20px_rgba(79,70,229,0.2)] hover:bg-[#4338ca] active:scale-95 whitespace-nowrap ml-2"
                                             >
-                                                Book This Stay <ChevronRight size={14} className="stroke-[3px]" />
+                                                BOOK <ChevronRight size={14} className="stroke-[4px]" />
                                             </Link>
                                         </div>
                                     </div>
@@ -566,6 +612,7 @@ const MapExplorer = () => {
                                 window.history.pushState({}, '', url);
                                 setDestination(null);
                                 setRouteInfo(null);
+                                setHeaderHidden(false);
                             }}
                             className="bg-white text-[#1a73e8] px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-100 transition-all shadow-lg"
                         >

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Phone, User, Clock, Navigation, CheckCircle, AlertCircle, Loader } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { MapPin, Phone, User, Clock, Navigation, CheckCircle, AlertCircle, Loader, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import riderApi from '../../services/riderApi';
+import EmbeddedNavigation from '../EmbeddedNavigation';
 
 const ActiveRide = ({ rideId, onRideCompleted }) => {
   const [ride, setRide] = useState(null);
@@ -11,6 +12,7 @@ const ActiveRide = ({ rideId, onRideCompleted }) => {
   const [currentStatus, setCurrentStatus] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showNavigation, setShowNavigation] = useState(false);
 
   useEffect(() => {
     fetchRideStatus();
@@ -131,22 +133,20 @@ const ActiveRide = ({ rideId, onRideCompleted }) => {
           {getStatusSteps().map((step, index) => (
             <div key={step.step} className="flex-1 flex flex-col items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${
-                  step.completed
-                    ? step.active
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-green-500 text-white'
-                    : 'bg-gray-300 text-white'
-                }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center mb-2 ${step.completed
+                  ? step.active
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-green-500 text-white'
+                  : 'bg-gray-300 text-white'
+                  }`}
               >
                 {step.completed ? <CheckCircle className="w-5 h-5" /> : index + 1}
               </div>
               <p className="text-xs text-center text-gray-600 capitalize">{step.label}</p>
               {index < getStatusSteps().length - 1 && (
                 <div
-                  className={`absolute w-12 h-0.5 mt-4 ${
-                    step.completed ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
+                  className={`absolute w-12 h-0.5 mt-4 ${step.completed ? 'bg-green-500' : 'bg-gray-300'
+                    }`}
                 />
               )}
             </div>
@@ -215,6 +215,15 @@ const ActiveRide = ({ rideId, onRideCompleted }) => {
 
       {/* Action Buttons */}
       <div className="space-y-3">
+        {(currentStatus === 'accepted' || currentStatus === 'on_the_way' || currentStatus === 'picked_up') && (
+          <button
+            onClick={() => setShowNavigation(true)}
+            className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium flex items-center justify-center gap-2"
+          >
+            <Navigation className="w-4 h-4" />
+            Navigate
+          </button>
+        )}
         {currentStatus === 'accepted' && (
           <button
             onClick={() => updateStatus('on_the_way')}
@@ -302,6 +311,23 @@ const ActiveRide = ({ rideId, onRideCompleted }) => {
           </motion.div>
         </div>
       )}
+      {/* Navigation Modal */}
+      <AnimatePresence>
+        {showNavigation && (
+          <div className="fixed inset-0 z-[100] bg-navy flex flex-col">
+            <EmbeddedNavigation
+              pickupLat={ride.pickup_lat}
+              pickupLng={ride.pickup_lng}
+              dropoffLat={ride.destination_lat}
+              dropoffLng={ride.destination_lng}
+              navigationType={currentStatus === 'picked_up' ? 'dropoff' : 'pickup'}
+              customerName={ride.customer_name}
+              onClose={() => setShowNavigation(false)}
+              isMobile={true}
+            />
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

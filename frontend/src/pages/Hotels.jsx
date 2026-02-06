@@ -53,7 +53,7 @@ const Hotels = () => {
 
     return (
         <div className="bg-gray-50 min-h-screen pt-24 pb-20">
-            <div className="container mx-auto px-6">
+            <div className="container mx-auto max-w-7xl px-6">
                 {/* Header & Filters */}
                 <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-6">
                     <div>
@@ -66,7 +66,7 @@ const Hotels = () => {
                             <button
                                 key={filter}
                                 onClick={() => setActiveFilter(filter)}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${activeFilter === filter
+                                className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${activeFilter === filter
                                     ? 'bg-secondary text-white shadow-md'
                                     : 'text-gray-400 hover:text-secondary hover:bg-gray-50'
                                     }`}
@@ -119,7 +119,7 @@ const Hotels = () => {
                                             {hotel.price_per_hour && (
                                                 <div className="text-right">
                                                     <span className="text-secondary font-black text-2xl italic">৳{hotel.price_per_hour}</span>
-                                                    <span className="text-[10px] text-gray-400 block font-black uppercase tracking-widest mt-0.5">/hour</span>
+                                                    <span className="text-xs text-gray-400 block font-black uppercase tracking-widest mt-0.5">/hour</span>
                                                 </div>
                                             )}
                                         </div>
@@ -129,7 +129,7 @@ const Hotels = () => {
                                         </p>
 
                                         <div className="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
-                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5">
+                                            <span className="text-xs font-black uppercase tracking-widest text-emerald-500 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 flex items-center gap-1.5">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Available Now
                                             </span>
                                         </div>

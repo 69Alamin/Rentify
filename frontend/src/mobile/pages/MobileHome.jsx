@@ -4,6 +4,7 @@ import { Search, Bell, Filter, Star, MapPin, Car } from 'lucide-react';
 import MobileHotelCard from '../components/MobileHotelCard';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../../components/ui/Logo';
+import PendingBookingCard from '../../components/PendingBookingCard.jsx';
 
 const MobileHome = () => {
     const [heroIndex, setHeroIndex] = useState(0);
@@ -114,6 +115,11 @@ const MobileHome = () => {
                         </div>
                     </div>
                 </motion.div>
+            </div>
+
+            {/* Pending Booking Confirmation */}
+            <div className="px-6">
+                <PendingBookingCard onSuccess={() => fetchNotifications()} />
             </div>
 
             {/* Dynamic Hero Text */}

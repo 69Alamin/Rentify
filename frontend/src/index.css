@@ -7,6 +7,7 @@
   /* HSL Color System */
   --color-navy: hsl(222 47% 6%);
   --color-navy-card: hsl(222 47% 8%);
+  --color-navy-light: hsl(222 47% 12%);
   --color-navy-border: hsl(222 30% 18%);
   --color-foreground: hsl(210 40% 98%);
   --color-primary: hsl(239 84% 67%);

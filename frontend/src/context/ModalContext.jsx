@@ -21,6 +21,7 @@ export const ModalProvider = ({ children }) => {
         confirmText: 'OK',
         cancelText: 'Cancel'
     });
+    const [headerHidden, setHeaderHidden] = useState(false);
 
     const showModal = useCallback(({ type = 'info', title, message, onConfirm, onCancel, confirmText = 'OK', cancelText = 'Cancel' }) => {
         setModal({
@@ -86,7 +87,7 @@ export const ModalProvider = ({ children }) => {
     };
 
     return (
-        <ModalContext.Provider value={{ showAlert, showSuccess, showError, showConfirm, hideModal }}>
+        <ModalContext.Provider value={{ showAlert, showSuccess, showError, showConfirm, hideModal, headerHidden, setHeaderHidden }}>
             {children}
 
             <AnimatePresence>
@@ -146,8 +147,8 @@ export const ModalProvider = ({ children }) => {
                                             else hideModal();
                                         }}
                                         className={`flex-1 py-4 rounded-2xl font-black italic shadow-lg transition-all hover:scale-105 active:scale-95 ${modal.type === 'error' ? 'bg-red-500 text-white shadow-red-500/20' :
-                                                modal.type === 'success' ? 'bg-green-500 text-white shadow-green-500/20' :
-                                                    'bg-primary text-white shadow-primary/20'
+                                            modal.type === 'success' ? 'bg-green-500 text-white shadow-green-500/20' :
+                                                'bg-primary text-white shadow-primary/20'
                                             }`}
                                     >
                                         {modal.confirmText}

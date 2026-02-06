@@ -49,17 +49,24 @@ const RoutingMachine = ({ origin, destination, onRouteCalculated }) => {
     const map = useMap();
     const routingControlRef = useRef(null);
 
+    const isValidCoord = (c) => {
+        if (!c || !Array.isArray(c) || c.length < 2) return false;
+        const lat = parseFloat(c[0]);
+        const lng = parseFloat(c[1]);
+        return !isNaN(lat) && !isNaN(lng);
+    };
+
     // Initial creation of the routing control
     useEffect(() => {
-        if (!map || !origin || !destination) return;
+        if (!map || !isValidCoord(origin) || !isValidCoord(destination)) return;
 
         // Ensure map layout is correct
         setTimeout(() => map.invalidateSize(), 500);
 
         const routingControl = L.Routing.control({
             waypoints: [
-                L.latLng(origin[0], origin[1]),
-                L.latLng(destination[0], destination[1])
+                L.latLng(parseFloat(origin[0]), parseFloat(origin[1])),
+                L.latLng(parseFloat(destination[0]), parseFloat(destination[1]))
             ],
             router: L.Routing.osrmv1({
                 serviceUrl: 'https://router.project-osrm.org/route/v1',
@@ -110,13 +117,13 @@ const RoutingMachine = ({ origin, destination, onRouteCalculated }) => {
 
     // Smooth Waypoint Updates
     useEffect(() => {
-        if (routingControlRef.current && origin && destination) {
+        if (routingControlRef.current && isValidCoord(origin) && isValidCoord(destination)) {
             routingControlRef.current.setWaypoints([
-                L.latLng(origin[0], origin[1]),
-                L.latLng(destination[0], destination[1])
+                L.latLng(parseFloat(origin[0]), parseFloat(origin[1])),
+                L.latLng(parseFloat(destination[0]), parseFloat(destination[1]))
             ]);
         }
-    }, [origin[0], origin[1], destination[0], destination[1]]);
+    }, [origin?.[0], origin?.[1], destination?.[0], destination?.[1]]);
 
     return null;
 };
@@ -197,7 +204,8 @@ const EmbeddedNavigation = ({
         );
     }
 
-    const mapCenter = userLocation || destination;
+    const DEFAULT_CENTER = [23.8103, 90.4125]; // Dhaka default
+    const mapCenter = (userLocation && isValidCoordinate(userLocation[0])) ? userLocation : (hasValidDestination ? destination : DEFAULT_CENTER);
     const activeZoom = isStarted ? 18 : 15;
 
     // Mobile Full-screen Version

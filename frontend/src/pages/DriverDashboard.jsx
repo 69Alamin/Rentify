@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import {
     Truck, MapPin, Calendar, User, Check, Navigation, Loader,
     Package, AlertCircle, TrendingUp, Clock, ShieldCheck,
-    ChevronRight, Phone, Power, History, Star, CreditCard
+    ChevronRight, Phone, Power, History, Star, CreditCard, MessageCircle
 } from 'lucide-react';
+import ChatModal from '../mobile/components/ChatModal.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModal } from '../context/ModalContext';
 import EmbeddedNavigation from '../components/EmbeddedNavigation.jsx';
@@ -24,6 +25,7 @@ const DriverDashboard = () => {
     const [showNavigation, setShowNavigation] = useState(false);
     const [navigating, setNavigating] = useState(false);
     const [navigationType, setNavigationType] = useState(null); // 'pickup' or 'hotel'
+    const [chatTarget, setChatTarget] = useState(null); // { id, name, contextId, contextType }
     const locationRef = React.useRef(location);
 
     useEffect(() => {
@@ -341,12 +343,23 @@ const DriverDashboard = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-3 relative z-10 w-full md:w-64">
-                                    <a href={`tel:${activeRide.customer_phone || '000'}`} className="bg-white text-secondary px-6 py-3.5 rounded-xl font-black text-center flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 transition-transform text-sm">
+                                <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+                                    <button
+                                        onClick={() => setChatTarget({
+                                            id: activeRide.user_id,
+                                            name: activeRide.customer_name,
+                                            contextId: activeRide.id,
+                                            contextType: 'ride'
+                                        })}
+                                        className="bg-indigo-500 hover:bg-indigo-600 px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-black transition-all border border-indigo-400"
+                                    >
+                                        <MessageCircle size={14} /> CHAT WITH CLIENT
+                                    </button>
+                                    <a href={`tel:${activeRide.customer_phone || '000'}`} className="bg-white text-secondary px-6 py-3.5 rounded-xl font-black text-center flex items-center justify-center gap-2 shadow-lg hover:-translate-y-0.5 transition-transform text-sm md:hidden">
                                         <Phone size={18} /> CALL CLIENT
                                     </a>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 w-full">
                                         {activeRide?.status === 'assigned' && (
                                             <StatusButton onClick={() => {
                                                 setNavigationType('pickup');
@@ -526,6 +539,15 @@ const DriverDashboard = () => {
                     )}
                 </div>
             </div>
+
+            <ChatModal
+                isOpen={!!chatTarget}
+                onClose={() => setChatTarget(null)}
+                otherUserId={chatTarget?.id}
+                otherUserName={chatTarget?.name}
+                contextId={chatTarget?.contextId}
+                contextType={chatTarget?.contextType}
+            />
         </div>
     );
 };
@@ -583,6 +605,17 @@ const RideRequestCard = ({ ride, onAccept }) => {
                 >
                     <Navigation size={12} /> Map View
                 </a>
+                <button
+                    onClick={() => setChatTarget({
+                        id: ride.user_id,
+                        name: ride.customer_name,
+                        contextId: ride.id,
+                        contextType: 'ride'
+                    })}
+                    className="w-full bg-indigo-50 text-indigo-600 font-black py-3 rounded-xl hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest"
+                >
+                    <MessageCircle size={16} /> Chat
+                </button>
                 <button
                     onClick={() => onAccept(ride.id)}
                     className="w-full bg-emerald-600 text-white font-black py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest"

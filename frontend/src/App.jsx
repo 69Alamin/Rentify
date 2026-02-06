@@ -15,6 +15,9 @@ import MobileHotelDetails from './mobile/pages/MobileHotelDetails';
 import MobileFoodService from './mobile/pages/MobileFoodService';
 import MobileAlternativeJourney from './mobile/pages/MobileAlternativeJourney';
 import MobileRiderDashboard from './mobile/pages/MobileRiderDashboard';
+import MobileVendorDashboard from './mobile/pages/MobileVendorDashboard';
+import MobileMessages from './mobile/pages/MobileMessages';
+import MobileVerification from './mobile/pages/MobileVerification';
 import Hotels from './pages/Hotels';
 import HotelDetails from './pages/HotelDetails';
 import Dashboard from './pages/Dashboard';
@@ -26,6 +29,7 @@ import Register from './pages/Register';
 import VendorDashboard from './pages/VendorDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import DriverDashboard from './pages/DriverDashboard';
+import Verification from './pages/Verification';
 import OrderHistory from './pages/OrderHistory';
 import FoodService from './pages/FoodService';
 import AIAnalytics from './pages/AIAnalytics';
@@ -57,6 +61,10 @@ function App() {
             <Route path="about" element={<About />} />
             <Route path="map" element={isMobile ? <MobileMap /> : <MapExplorer />} />
             <Route path="notifications" element={isMobile ? <MobileNotifications /> : <Notifications />} />
+            {/* Protected routes for all roles */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="messages" element={<MobileMessages />} />
+            </Route>
 
             {/* Authentication */}
             <Route path="login" element={<Login />} />
@@ -73,7 +81,7 @@ function App() {
 
             {/* Vendor Routes */}
             <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>
-              <Route path="vendor/dashboard" element={<VendorDashboard />} />
+              <Route path="vendor/dashboard" element={isMobile ? <MobileVendorDashboard /> : <VendorDashboard />} />
             </Route>
 
             {/* Admin Routes */}
@@ -86,6 +94,12 @@ function App() {
             <Route element={<ProtectedRoute allowedRoles={['driver', 'rider']} />}>
               <Route path="driver/dashboard" element={isMobile ? <MobileRiderDashboard /> : <DriverDashboard />} />
             </Route>
+
+            {/* Trust Center (Verification) - Accessible to all user types */}
+            <Route element={<ProtectedRoute allowedRoles={['driver', 'rider', 'vendor', 'customer']} />}>
+              <Route path="trust-center" element={isMobile ? <MobileVerification /> : <Verification />} />
+            </Route>
+
             <Route path="*" element={<div className="h-screen flex items-center justify-center text-2xl font-bold text-secondary">404 - Page Not Found</div>} />
           </Route>
         </Routes>

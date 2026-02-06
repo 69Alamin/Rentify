@@ -92,7 +92,7 @@ const AdminDashboard = () => {
                         </div>
                         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-gray-200 shadow-sm animate-fade-in">
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">System Operational</span>
+                            <span className="text-xs font-black text-gray-500 uppercase tracking-widest">System Operational</span>
                         </div>
                     </div>
 

@@ -1,28 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     User, Phone, MapPin, Navigation, Check, Clock, Package,
     Power, Star, CreditCard, TrendingUp, ChevronLeft, ChevronRight,
-    Truck, Loader, History, Settings, AlertCircle, X, Save
+    Truck, Loader, History, Settings, AlertCircle, X, Save, MessageCircle, Shield
 } from 'lucide-react';
 import { useModal } from '../../context/ModalContext';
 import EmbeddedNavigation from '../../components/EmbeddedNavigation.jsx';
+import ChatModal from '../components/ChatModal.jsx';
 
 const MobileRiderDashboard = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { showSuccess, showError, showConfirm } = useModal();
     const [pendingRides, setPendingRides] = useState([]);
     const [myRides, setMyRides] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('requests');
+    const [activeTab, setActiveTab] = useState('overview'); // Default to overview
     const [profile, setProfile] = useState(null);
     const [onlineStatus, setOnlineStatus] = useState('offline');
     const [stats, setStats] = useState({ daily: '0.00', weekly: '0.00', total: '0.00', trips: 0 });
     const [updating, setUpdating] = useState(false);
-    const [location, setLocation] = useState(null);
-    const locationRef = useRef(location);
+    const [userLocation, setUserLocation] = useState(null);
+    const locationRef = useRef(userLocation);
     const [showNavigation, setShowNavigation] = useState(false);
+    const [chatTarget, setChatTarget] = useState(null); // { id, name, contextId, contextType }
 
     // Profile edit state
     const [editForm, setEditForm] = useState({
@@ -31,8 +34,8 @@ const MobileRiderDashboard = () => {
     });
 
     useEffect(() => {
-        locationRef.current = location;
-    }, [location]);
+        locationRef.current = userLocation;
+    }, [userLocation]);
 
     useEffect(() => {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -45,7 +48,7 @@ const MobileRiderDashboard = () => {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                    setLocation(coords);
+                    setUserLocation(coords);
 
                     const activeRide = myRides.find(r => ['on_the_way', 'picked'].includes(r.status));
                     if (activeRide) {
@@ -114,8 +117,8 @@ const MobileRiderDashboard = () => {
             if (isMounted) longPoll();
         };
 
-        // We still keep a slow interval as a safety net (e.g. 5s) in case polling hangs or misses
-        const safetyInterval = setInterval(() => fetchData(locationRef.current), 5000);
+        // We still keep a slower interval as a safety net (e.g. 30s) now that Sync API is efficient
+        const safetyInterval = setInterval(() => fetchData(locationRef.current), 30000); // Increased to 30s
 
         // Start polling
         longPoll();
@@ -127,40 +130,48 @@ const MobileRiderDashboard = () => {
         };
     }, [navigate, myRides.length]); // Re-bind when rides change (to switch between global/ride polling)
 
-    const fetchData = async (currentLoc = location) => {
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const category = params.get('category') || 'overview';
+        setActiveTab(category);
+    }, [location]);
+
+    const fetchData = async (currentLoc = locationRef.current) => {
         try {
-            const pRes = await fetch('/api/user/get_profile.php', { credentials: 'include' });
-            const pData = await pRes.json();
-            if (pData.success) {
-                setProfile(pData.data);
-                setOnlineStatus(pData.data.online_status || 'offline');
-                setEditForm({
-                    full_name: pData.data.full_name || '',
-                    phone: pData.data.phone || '',
-                    vehicle_model: pData.data.vehicle_model || '',
-                    number_plate: pData.data.number_plate || '',
-                    max_passengers: pData.data.max_passengers || 4,
-                    luggage_support: pData.data.luggage_support == 1
-                });
-            }
-
-            const sRes = await fetch('/api/user/earnings.php', { credentials: 'include' });
-            const sData = await sRes.json();
-            if (sData.success) setStats(sData.data);
-
-            let url = `/api/rides/request.php?t=${Date.now()}`;
             const loc = currentLoc || locationRef.current;
-            if (loc) url += `&lat=${loc.lat}&lng=${loc.lng}`;
+            let syncUrl = `/api/rides/sync.php?t=${Date.now()}`;
+            if (loc) syncUrl += `&lat=${loc.lat}&lng=${loc.lng}`;
 
-            const res = await fetch(url, { credentials: 'include' });
+            const res = await fetch(syncUrl, { credentials: 'include' });
             const data = await res.json();
+
             if (data.success) {
-                const rides = data.data;
-                setPendingRides(rides.filter(r => r.status === 'requested'));
-                setMyRides(rides.filter(r => r.status !== 'requested'));
+                // Profile
+                if (data.profile) {
+                    setProfile(data.profile);
+                    setOnlineStatus(data.profile.online_status || 'offline');
+                    setEditForm({
+                        full_name: data.profile.full_name || '',
+                        phone: data.profile.phone || '',
+                        vehicle_model: data.profile.vehicle_model || '',
+                        number_plate: data.profile.number_plate || '',
+                        max_passengers: data.profile.max_passengers || 4,
+                        luggage_support: data.profile.luggage_support == 1
+                    });
+                }
+
+                // Stats
+                if (data.stats) setStats(data.stats);
+
+                // Rides
+                if (data.rides) {
+                    const rides = data.rides;
+                    setPendingRides(rides.filter(r => r.status === 'requested'));
+                    setMyRides(rides.filter(r => r.status !== 'requested'));
+                }
             }
         } catch (err) {
-            console.error('Error loading rider data:', err);
+            console.error('Error syncing rider data:', err);
         } finally {
             setLoading(false);
         }
@@ -276,53 +287,55 @@ const MobileRiderDashboard = () => {
 
     return (
         <div className="min-h-screen bg-navy text-white pb-28">
-            {/* Header */}
-            <div className="bg-navy/95 backdrop-blur-xl px-6 pt-12 pb-6 border-b border-white/5 sticky top-0 z-20">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-indigo-500 rounded-2xl flex items-center justify-center text-lg font-black text-white shadow-lg">
-                                {profile?.full_name?.charAt(0) || <User />}
+            {/* Header - Hidden on overview tab */}
+            {activeTab !== 'overview' && (
+                <div className="bg-navy/95 backdrop-blur-xl px-6 pt-12 pb-6 border-b border-white/5 sticky top-0 z-20">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <div className="relative">
+                                <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-indigo-500 rounded-2xl flex items-center justify-center text-lg font-black text-white shadow-lg">
+                                    {profile?.full_name?.charAt(0) || <User />}
+                                </div>
+                                <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-navy ${onlineStatus === 'online' ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                             </div>
-                            <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-navy ${onlineStatus === 'online' ? 'bg-green-500' : 'bg-gray-500'}`}></div>
-                        </div>
-                        <div>
-                            <h1 className="text-lg font-black text-white">Hey, {profile?.full_name?.split(' ')[0] || 'Rider'}!</h1>
-                            <div className="flex items-center gap-2">
-                                <span className={`text-[9px] font-black uppercase tracking-widest ${onlineStatus === 'online' ? 'text-green-400' : 'text-gray-500'}`}>
-                                    {onlineStatus}
-                                </span>
-                                <span className="text-gray-600">•</span>
-                                <div className="flex items-center gap-1 text-yellow-400 text-[10px] font-black">
-                                    <Star size={10} fill="currentColor" /> {profile?.rating_avg || '5.0'}
+                            <div>
+                                <h1 className="text-lg font-black text-white">Hey, {profile?.full_name?.split(' ')[0] || 'Rider'}!</h1>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-[9px] font-black uppercase tracking-widest ${onlineStatus === 'online' ? 'text-green-400' : 'text-gray-500'}`}>
+                                        {onlineStatus}
+                                    </span>
+                                    <span className="text-gray-600">•</span>
+                                    <div className="flex items-center gap-1 text-yellow-400 text-[10px] font-black">
+                                        <Star size={10} fill="currentColor" /> {profile?.rating_avg || '5.0'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        <button
+                            onClick={toggleStatus}
+                            className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all ${onlineStatus === 'online' ? 'bg-white/10 text-white border border-white/10' : 'bg-green-500 text-white shadow-lg shadow-green-500/20'}`}
+                        >
+                            <Power size={14} /> {onlineStatus === 'online' ? 'Offline' : 'Go Live'}
+                        </button>
                     </div>
-                    <button
-                        onClick={toggleStatus}
-                        className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all ${onlineStatus === 'online' ? 'bg-white/10 text-white border border-white/10' : 'bg-green-500 text-white shadow-lg shadow-green-500/20'}`}
-                    >
-                        <Power size={14} /> {onlineStatus === 'online' ? 'Offline' : 'Go Live'}
-                    </button>
-                </div>
 
-                {/* Stats Row */}
-                <div className="flex gap-3">
-                    <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Today</p>
-                        <p className="text-lg font-black text-accent">৳{stats.daily}</p>
-                    </div>
-                    <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Trips</p>
-                        <p className="text-lg font-black text-white">{stats.trips}</p>
-                    </div>
-                    <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
-                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Weekly</p>
-                        <p className="text-lg font-black text-indigo-400">৳{stats.weekly}</p>
+                    {/* Stats Row */}
+                    <div className="flex gap-3">
+                        <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Today</p>
+                            <p className="text-lg font-black text-accent">৳{stats.daily}</p>
+                        </div>
+                        <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Trips</p>
+                            <p className="text-lg font-black text-white">{stats.trips}</p>
+                        </div>
+                        <div className="flex-1 bg-white/5 rounded-xl p-3 border border-white/5">
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-1">Weekly</p>
+                            <p className="text-lg font-black text-indigo-400">৳{stats.weekly}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Active Trip HUD */}
             <AnimatePresence>
@@ -377,6 +390,17 @@ const MobileRiderDashboard = () => {
                                     >
                                         <Navigation size={14} /> Navigate
                                     </button>
+                                    <button
+                                        onClick={() => setChatTarget({
+                                            id: activeRide.user_id,
+                                            name: activeRide.customer_name,
+                                            contextId: activeRide.id,
+                                            contextType: 'ride'
+                                        })}
+                                        className="bg-accent text-navy p-3 rounded-xl shadow-lg shadow-accent/20 active:scale-95 transition-all"
+                                    >
+                                        <MessageCircle size={20} />
+                                    </button>
                                 </div>
 
                                 <div className="mt-4">
@@ -402,31 +426,31 @@ const MobileRiderDashboard = () => {
                 )}
             </AnimatePresence>
 
-            {/* Tabs */}
-            <div className="flex gap-2 px-4 mt-4 overflow-x-auto pb-2 scrollbar-hide">
-                {[
-                    { id: 'requests', label: 'Requests', count: pendingRides.length, icon: <Truck size={14} /> },
-                    { id: 'history', label: 'History', icon: <History size={14} /> },
-                    { id: 'profile', label: 'Profile', icon: <Settings size={14} /> }
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === tab.id ? 'bg-white text-navy' : 'bg-white/5 text-gray-400 border border-white/5'}`}
-                    >
-                        {tab.icon} {tab.label}
-                        {tab.count !== undefined && tab.count > 0 && (
-                            <span className="bg-accent text-navy px-1.5 py-0.5 rounded-full text-[8px]">{tab.count}</span>
-                        )}
-                    </button>
-                ))}
-            </div>
+            {/* Active Trip HUD removed sub-tabs block */}
 
             {/* Content Area */}
             <div className="p-4">
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                    <RiderOverview
+                        profile={profile}
+                        onlineStatus={onlineStatus}
+                        toggleStatus={toggleStatus}
+                        stats={stats}
+                        myRides={myRides}
+                    />
+                )}
+
                 {/* Requests Tab */}
                 {activeTab === 'requests' && (
                     <div className="space-y-4">
+                        <div className="flex items-center justify-between mb-2 px-1">
+                            <h2 className="text-sm font-black uppercase tracking-widest text-white/50">Available Rides</h2>
+                            <div className="flex items-center gap-2 text-[8px] font-black uppercase tracking-widest text-accent bg-accent/10 px-2 py-1 rounded-full">
+                                <div className="w-1 h-1 bg-accent rounded-full animate-ping"></div>
+                                Live Polling
+                            </div>
+                        </div>
                         {pendingRides.length === 0 ? (
                             <div className="bg-white/5 rounded-2xl p-10 text-center border border-white/5">
                                 <Clock size={40} className="mx-auto mb-4 text-gray-600" />
@@ -480,56 +504,52 @@ const MobileRiderDashboard = () => {
 
                 {/* Profile Tab */}
                 {activeTab === 'profile' && profile && (
-                    <form onSubmit={handleProfileUpdate} className="space-y-4">
-                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-4">
-                            <ProfileInput label="Full Name" value={editForm.full_name} onChange={v => setEditForm(f => ({ ...f, full_name: v }))} icon={<User size={16} />} />
-                            <ProfileInput label="Phone Number" value={editForm.phone} onChange={v => setEditForm(f => ({ ...f, phone: v }))} icon={<Phone size={16} />} />
-                            <ProfileInput label="Vehicle Model" value={editForm.vehicle_model} onChange={v => setEditForm(f => ({ ...f, vehicle_model: v }))} icon={<Truck size={16} />} placeholder="e.g. Toyota Corolla" />
-                            <ProfileInput label="Number Plate" value={editForm.number_plate} onChange={v => setEditForm(f => ({ ...f, number_plate: v }))} icon={<CreditCard size={16} />} placeholder="e.g. DHA-1234" />
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="space-y-6"
+                    >
+                        <div className="flex items-center gap-4 pt-6 pb-2">
+                            <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-indigo-500 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-xl shadow-indigo-500/20">
+                                {profile.full_name?.charAt(0)}
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-black text-white underline decoration-accent/50">{profile.full_name}</h2>
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">Vehicle Manager</p>
+                            </div>
                         </div>
 
-                        <div className="bg-white/5 rounded-2xl p-4 border border-white/5 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="font-bold text-white text-sm">Max Passengers</p>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">Capacity</p>
-                                </div>
-                                <select
-                                    value={editForm.max_passengers}
-                                    onChange={e => setEditForm(f => ({ ...f, max_passengers: parseInt(e.target.value) }))}
-                                    className="bg-white/10 border border-white/10 rounded-xl px-4 py-2.5 font-bold text-white outline-none"
-                                >
-                                    {[1, 2, 3, 4, 7, 10].map(n => <option key={n} value={n} className="text-navy">{n} Pax</option>)}
-                                </select>
-                            </div>
+                        <form onSubmit={handleProfileUpdate} className="space-y-4">
+                            <div className="bg-white/5 rounded-2xl p-6 border border-white/5 space-y-5">
+                                <ProfileInput label="Full Name" value={editForm.full_name} onChange={v => setEditForm(f => ({ ...f, full_name: v }))} icon={<User size={16} />} placeholder="Your full name" />
+                                <ProfileInput label="Phone" value={editForm.phone} onChange={v => setEditForm(f => ({ ...f, phone: v }))} icon={<Phone size={16} />} />
+                                <ProfileInput label="Vehicle" value={editForm.vehicle_model} onChange={v => setEditForm(f => ({ ...f, vehicle_model: v }))} icon={<Truck size={16} />} placeholder="e.g. Toyota Corolla" />
+                                <ProfileInput label="Tag" value={editForm.number_plate} onChange={v => setEditForm(f => ({ ...f, number_plate: v }))} icon={<CreditCard size={16} />} placeholder="e.g. DHA-1234" />
 
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/10 rounded-xl"><Package size={16} className="text-accent" /></div>
-                                    <div>
-                                        <p className="font-bold text-white text-sm">Luggage Support</p>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest">Cargo bay</p>
-                                    </div>
-                                </div>
                                 <button
                                     type="button"
-                                    onClick={() => setEditForm(f => ({ ...f, luggage_support: !f.luggage_support }))}
-                                    className={`w-12 h-6 rounded-full transition-all relative ${editForm.luggage_support ? 'bg-accent' : 'bg-white/20'}`}
+                                    onClick={() => navigate('/trust-center')}
+                                    className="w-full flex items-center gap-4 p-4 bg-accent/10 rounded-xl border border-accent/20 hover:bg-accent/20 transition-all"
                                 >
-                                    <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${editForm.luggage_support ? 'left-7' : 'left-1'}`}></div>
+                                    <div className="p-2 bg-accent/20 rounded-lg text-accent"><Shield size={16} /></div>
+                                    <div className="text-left flex-1">
+                                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest leading-none mb-1">Trust Center</p>
+                                        <p className="text-sm font-bold text-accent">Verify Your Identity</p>
+                                    </div>
+                                    <ChevronRight size={16} className="text-accent" />
                                 </button>
                             </div>
-                        </div>
 
-                        <button
-                            type="submit"
-                            disabled={updating}
-                            className="w-full bg-accent text-navy py-4 rounded-xl font-black text-sm flex items-center justify-center gap-2"
-                        >
-                            {updating ? <Loader className="animate-spin" size={18} /> : <Save size={18} />}
-                            Save Changes
-                        </button>
-                    </form>
+                            <button
+                                type="submit"
+                                disabled={updating}
+                                className="w-full aura-gradient-primary text-white py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-aura-md hover:scale-[1.02] transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                {updating ? <Loader className="animate-spin" size={16} /> : <Save size={16} />}
+                                Synchronize Updates
+                            </button>
+                        </form>
+                    </motion.div>
                 )}
             </div>
 
@@ -548,7 +568,133 @@ const MobileRiderDashboard = () => {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Chat Modal Overlay */}
+            <ChatModal
+                isOpen={!!chatTarget}
+                onClose={() => setChatTarget(null)}
+                otherUserId={chatTarget?.id}
+                otherUserName={chatTarget?.name}
+                contextId={chatTarget?.contextId}
+                contextType={chatTarget?.contextType}
+            />
         </div>
+    );
+};
+
+// Rider Overview Component
+const RiderOverview = ({ profile, onlineStatus, toggleStatus, stats, myRides }) => {
+    const successRate = 98.4; // Mock for now or calculate if available
+    const rating = profile?.rating_avg || '5.0';
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+        >
+            {/* Mission Control Header */}
+            <div className="flex items-center justify-between pt-6 pb-2">
+                <div>
+                    <h2 className="text-2xl font-black text-white italic">Mission <span className="text-accent underline decoration-indigo-500/50">Control</span></h2>
+                    <p className="text-[9px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1">Global Operations Manager</p>
+                </div>
+                <button
+                    onClick={toggleStatus}
+                    className={`px-4 py-2.5 rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${onlineStatus === 'online' ? 'bg-green-500 text-white shadow-green-500/20' : 'bg-white/5 text-gray-500 border border-white/10'}`}
+                >
+                    <Power size={14} /> {onlineStatus === 'online' ? 'Go Offline' : 'Go Live'}
+                </button>
+            </div>
+
+            {/* Main Stats Grid */}
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gradient-to-br from-indigo-600 to-indigo-500 rounded-3xl p-6 shadow-xl relative overflow-hidden group">
+                    <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+                        <TrendingUp size={100} />
+                    </div>
+                    <p className="text-[10px] text-white/60 font-black uppercase tracking-widest mb-1">Today's Revenue</p>
+                    <p className="text-3xl font-black text-white italic">৳{stats.daily}</p>
+                    <div className="mt-4 flex items-center gap-1.5 text-[9px] font-black bg-white/20 w-fit px-2 py-1 rounded-full text-white uppercase tracking-tighter">
+                        <Check size={8} /> +12% from yesterday
+                    </div>
+                </div>
+
+                <div className="bg-slate-900 border border-white/5 rounded-3xl p-6 shadow-lg flex flex-col justify-between">
+                    <div>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Total Trips</p>
+                        <p className="text-3xl font-black text-white italic">{stats.trips}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[9px] font-black text-indigo-400 bg-indigo-400/10 w-fit px-2 py-1 rounded-full uppercase tracking-tighter">
+                        Trip Master
+                    </div>
+                </div>
+            </div>
+
+            {/* Performance Widgets */}
+            <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-8">
+                <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-white/80">Performance</h3>
+                    <div className="flex items-center gap-1 text-[10px] font-black text-accent">
+                        <Star size={12} fill="currentColor" /> {rating}
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-accent">
+                            <Check size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex justify-between mb-1.5">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Success Rate</p>
+                                <p className="text-[10px] font-black text-white">{successRate}%</p>
+                            </div>
+                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-accent" style={{ width: `${successRate}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-indigo-400">
+                            <Clock size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex justify-between mb-1.5">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Total Earnings</p>
+                                <p className="text-[10px] font-black text-white">৳{stats.total}</p>
+                            </div>
+                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-indigo-500" style={{ width: '100%' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-white/40">Recent History</h3>
+                    <TrendingUp size={14} className="text-white/20" />
+                </div>
+                {myRides.slice(0, 3).map(ride => (
+                    <div key={ride.id} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-gray-500">
+                                <History size={18} />
+                            </div>
+                            <div>
+                                <p className="text-[11px] font-bold text-white">Trip #{ride.id}</p>
+                                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{ride.status}</p>
+                            </div>
+                        </div>
+                        <p className="text-sm font-black text-accent">৳{ride.estimated_fare}</p>
+                    </div>
+                ))}
+            </div>
+        </motion.div>
     );
 };
 

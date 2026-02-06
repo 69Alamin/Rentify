@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Shield, Zap, User, Bell, Trash2, CheckCircle2, ChevronDown, LogOut, LayoutDashboard, History, Utensils, Navigation } from 'lucide-react';
+import { Menu, X, Shield, Zap, User, Bell, Trash2, CheckCircle2, ChevronDown, LogOut, LayoutDashboard, History, Utensils, Navigation, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '../ui/Logo';
+import { useModal } from '../../context/ModalContext';
 
 const ActiveStatusBadge = () => {
     const [status, setStatus] = useState(null);
@@ -22,7 +23,7 @@ const ActiveStatusBadge = () => {
             } catch (e) { }
         };
         checkStatus();
-        const interval = setInterval(checkStatus, 5000);
+        const interval = setInterval(checkStatus, 20000); // Increased to 20s
         return () => clearInterval(interval);
     }, []);
 
@@ -147,40 +148,6 @@ const ServiceButtons = ({ textColorClass, isScrolled, isLightPage }) => {
     );
 };
 
-const ActiveStatusBadge_old = () => {
-    const [status, setStatus] = useState(null);
-
-    useEffect(() => {
-        const checkStatus = async () => {
-            try {
-                const res = await fetch('/api/user/active_status.php', { credentials: 'include' });
-                if (res.status === 401) {
-                    localStorage.removeItem('user');
-                    window.location.href = '/login';
-                    return;
-                }
-                const data = await res.json();
-                if (data.success && data.active) setStatus(data);
-                else setStatus(null);
-            } catch (e) { }
-        };
-        checkStatus();
-        const interval = setInterval(checkStatus, 5000);
-        return () => clearInterval(interval);
-    }, []);
-
-    if (!status) return null;
-
-    return (
-        <div className="bg-primary/10 border border-primary/20 text-primary px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 animate-pulse mr-2">
-            <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-            </span>
-            {status.message}
-        </div>
-    );
-};
 
 const UserDropdown = ({ textColorClass, isScrolled, isLightPage }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -281,6 +248,7 @@ const Header = () => {
     const [notifications, setNotifications] = useState([]);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
+    const { headerHidden } = useModal();
     const location = useLocation();
     const notifRef = useRef(null);
     const mobileMenuRef = useRef(null);
@@ -392,7 +360,7 @@ const Header = () => {
                 onMouseLeave={() => setIsHovered(false)}
                 initial={false}
                 animate={{
-                    y: isAnalyticsPage && !isHovered ? -100 : 0
+                    y: headerHidden ? -120 : (isAnalyticsPage && !isHovered ? -100 : 0)
                 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className={`fixed top-4 left-4 right-4 z-50 transition-all duration-500 rounded-[2.5rem] ${isScrolled
@@ -402,7 +370,7 @@ const Header = () => {
                         : 'glass-card shadow-aura-md border-b border-gray-100 py-4'
                     }`}
             >
-                <div className="container mx-auto px-6 flex justify-between items-center">
+                <div className="container mx-auto max-w-7xl px-6 flex justify-between items-center">
                     {/* Logo */}
                     <Link to="/" className="flex items-center">
                         <Logo
@@ -434,7 +402,16 @@ const Header = () => {
                                 <ServiceButtons textColorClass={textColorClass} isScrolled={isScrolled} isLightPage={isLightPage} />
 
                                 {/* Active Status Indicator */}
-                                <ActiveStatusBadge_old />
+                                <ActiveStatusBadge />
+
+                                {/* Messages Link */}
+                                <Link
+                                    to="/messages"
+                                    className={`p-2 rounded-full transition-all relative mr-2 ${isScrolled || !isLightPage ? 'hover:bg-white/10 text-white' : 'hover:bg-gray-100 text-secondary'}`}
+                                    title="Messages"
+                                >
+                                    <MessageCircle size={20} />
+                                </Link>
 
                                 {/* Notification Bell */}
                                 <div className="relative mr-2" ref={notifRef}>

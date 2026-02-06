@@ -33,9 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $user_type = $_SESSION['user_type'];
     $rides = [];
 
-    // Debug logging
-    $log_entry = date('Y-m-d H:i:s') . " - GET request from user $user_id (type: $user_type)\n";
-    file_put_contents(__DIR__ . '/debug_rides.log', $log_entry, FILE_APPEND);
+    // Debug logging disabled for performance
 
     if ($user_type === 'admin') {
         $sql = "SELECT jr.*, u.full_name as customer_name, d.full_name as driver_name 
@@ -49,8 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $lat = isset($_GET['lat']) && $_GET['lat'] != 0 ? (float)$_GET['lat'] : null;
         $lng = isset($_GET['lng']) && $_GET['lng'] != 0 ? (float)$_GET['lng'] : null;
         
-        // LOG RAW GET PARAMS
-        file_put_contents(__DIR__ . '/debug_rides.log', "Params: lat=$lat, lng=$lng\n", FILE_APPEND);
+        // LOGGING DISABLED
 
         // We'll show ALL unassigned requested rides to make it easy for the user to see
         // We'll show ALL unassigned requested rides AND the driver's assigned rides
@@ -76,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $res = db_query($sql, 'dddii', [$lat, $lng, $lat, $user_id, $user_id]);
         if ($res) while($row = mysqli_fetch_assoc($res)) $rides[] = $row;
         
-        file_put_contents(__DIR__ . '/debug_rides.log', "Found " . count($rides) . " rides matching criteria.\n", FILE_APPEND);
+        
         
         $debug = [
             'lat' => $lat,
@@ -87,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     } else {
         // Customer: show their ride requests with assigned rider
         $sql = "SELECT jr.*, jr.fare AS estimated_fare,
+                jr.pickup_latitude AS pickup_lat,
+                jr.pickup_longitude AS pickup_lng,
                 jr.dropoff_latitude AS destination_lat, 
                 jr.dropoff_longitude AS destination_lng,
                 jr.pickup_address,

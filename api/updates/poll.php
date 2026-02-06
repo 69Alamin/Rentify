@@ -72,8 +72,7 @@ while (time() - $start < $timeout) {
     
     // If status exists and is different from what client has, return it
     if ($new_status !== null && $new_status !== $current_status) {
-        // Log success
-        file_put_contents(__DIR__ . '/debug_poll.log', "  -> CHANGED to $new_status\n", FILE_APPEND);
+        // Log removed for performance
         
         echo json_encode(['success' => true, 'changed' => true, 'status' => $new_status]);
         exit();

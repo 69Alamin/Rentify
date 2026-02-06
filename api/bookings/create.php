@@ -202,6 +202,7 @@ try {
     }
 
     mysqli_commit($conn);
+    unset($_SESSION['pending_booking']);
     send_json(['success' => true, 'booking_id' => $booking_id]);
 
 } catch (Exception $e) {

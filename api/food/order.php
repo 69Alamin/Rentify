@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ORDER BY fo.created_at DESC";
         $res = db_query($sql, 'i', [$user_id]);
     } else {
-        $sql = "SELECT fo.*, p.name as hotel_name 
+        $sql = "SELECT fo.*, p.name as hotel_name, p.vendor_id 
                 FROM food_orders fo 
                 JOIN bookings b ON fo.booking_id = b.id
                 JOIN rooms r ON b.room_id = r.id

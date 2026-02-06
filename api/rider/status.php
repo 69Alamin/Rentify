@@ -163,6 +163,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $_GET['action'] === 'get_status') {
     }
 
     $sql = "SELECT rh.*, rp.vehicle_type, u.full_name, u.phone,
+            rh.pickup_lat,
+            rh.pickup_lng,
+            rh.drop_lat AS destination_lat,
+            rh.drop_lng AS destination_lng,
             (SELECT COUNT(*) FROM rider_ratings WHERE ride_id = ?) as has_rating
             FROM ride_history rh
             JOIN users u ON rh.user_id = u.id

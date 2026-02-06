@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar, Clock, MapPin, Loader, AlertCircle, Plus, Truck, Navigation, CheckCircle, Package, Send, X, Zap, Star, ShieldCheck, Phone, TrendingUp, User } from 'lucide-react';
+import { Calendar, Clock, MapPin, Loader, AlertCircle, Plus, Truck, Navigation, CheckCircle, Package, Send, X, Zap, Star, ShieldCheck, Phone, TrendingUp, User, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PendingBookingCard from '../components/PendingBookingCard.jsx';
 import EmbeddedNavigation from '../components/EmbeddedNavigation.jsx';
+import ChatModal from '../mobile/components/ChatModal.jsx';
 import { useModal } from '../context/ModalContext';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -60,6 +62,7 @@ const Dashboard = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedRide, setSelectedRide] = useState(null);
     const [showRideMap, setShowRideMap] = useState(false);
+    const [chatTarget, setChatTarget] = useState(null); // { id, name, contextId, contextType }
 
     // Hotel Review state
     const [reviewBooking, setReviewBooking] = useState(null);
@@ -68,7 +71,6 @@ const Dashboard = () => {
     const [submittingReview, setSubmittingReview] = useState(false);
 
     // Pending Booking Confirmation
-    const [pendingBooking, setPendingBooking] = useState(null);
     const [confirmingBooking, setConfirmingBooking] = useState(false);
 
     const isBrowser = typeof window !== 'undefined';
@@ -113,15 +115,6 @@ const Dashboard = () => {
             const userRes = await fetch('/api/auth/me.php', { credentials: 'include' });
             const userData = await userRes.json();
             if (userData.authenticated) setUser(userData.user);
-
-            // Fetch Pending Booking
-            const pendingRes = await fetch('/api/bookings/get_pending.php', { credentials: 'include' });
-            const pendingData = await pendingRes.json();
-            if (pendingData.success) {
-                setPendingBooking(pendingData.data);
-            } else {
-                setPendingBooking(null);
-            }
 
             const res = await fetch('/api/bookings/list.php', { credentials: 'include' });
             const data = await res.json();
@@ -278,14 +271,7 @@ const Dashboard = () => {
                 setExtendingId(null);
                 fetchBookings();
             } else {
-                // Compact the sidebar lists and use professional semantic colors for ride and order statuses.
-                // The following lines appear to be a checklist and are not valid JavaScript code.
-                // They have been commented out to maintain syntactical correctness.
-                // - [x] responsive container max-widths
-                // - [x] Optimize AI Analytics Page Layout for density
-                // - [x] Redesign Driver Dashboard for Professionalism and Density
-                // - [x] Redesign Customer Dashboard for User Friendliness and Professionalisme);
-                showError(data.message); // Reverted to original error handling to maintain functionality
+                showError(data.message);
             }
         } catch (err) {
             showError('Extension failed');
@@ -474,6 +460,29 @@ const Dashboard = () => {
         finally { setRequestingRide(false); }
     };
 
+    const handleCancelRide = async (rideId) => {
+        showConfirm("Are you sure you want to cancel this ride request?", async () => {
+            try {
+                const res = await fetch('/api/rides/status.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ride_id: rideId, status: 'cancelled' }),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showSuccess("Ride request cancelled");
+                    setSelectedRide(null);
+                    fetchBookings(); // Refresh rides list
+                } else {
+                    showError(data.message || "Failed to cancel ride");
+                }
+            } catch (err) {
+                showError("Network error cancelling ride");
+            }
+        });
+    };
+
     const handleRateRider = async () => {
         setSubmittingRating(true);
         try {
@@ -524,34 +533,11 @@ const Dashboard = () => {
         }
     };
 
-    const handleConfirmPending = async () => {
-        if (!pendingBooking) return;
-        setConfirmingBooking(true);
-        try {
-            const res = await fetch('/api/bookings/create.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(pendingBooking),
-                credentials: 'include'
-            });
-            const data = await res.json();
-            if (data.success) {
-                showSuccess('Booking completed successfully!');
-                setPendingBooking(null);
-                fetchBookings();
-            } else {
-                showError(data.message || 'Failed to complete booking');
-            }
-        } catch (err) {
-            showError('Booking finalization failed');
-        } finally {
-            setConfirmingBooking(false);
-        }
-    };
+
 
     return (
         <div className="bg-[#f8fafc] min-h-screen pt-28 pb-20 px-6 font-sans">
-            <div className="container mx-auto max-w-6xl">
+            <div className="container mx-auto max-w-7xl">
                 <div className="flex justify-between items-center mb-10">
                     <div>
                         <h1 className="text-2xl font-black text-secondary tracking-tight">My Profile & Trips</h1>
@@ -570,78 +556,7 @@ const Dashboard = () => {
                         </h2>
 
                         {/* Pending Booking Confirmation Card */}
-                        <AnimatePresence>
-                            {pendingBooking && (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95, y: -20 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: -20 }}
-                                    className="mb-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group"
-                                >
-                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform duration-700">
-                                        <Zap size={100} />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-white/20 px-3 py-1 rounded-full backdrop-blur-md mb-3 inline-block">Unfinished Booking Found</span>
-                                                <h3 className="text-3xl font-black italic tracking-tighter">Finish Your Order</h3>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    // Add an endpoint to clear session booking if needed, 
-                                                    // or just set state to null for this session.
-                                                    setPendingBooking(null);
-                                                }}
-                                                className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                                            >
-                                                <X size={20} />
-                                            </button>
-                                        </div>
-
-                                        <div className="bg-white/10 backdrop-blur-md rounded-[2rem] p-6 border border-white/10 flex flex-col md:flex-row gap-6 items-center mb-6">
-                                            <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 shadow-lg">
-                                                <img
-                                                    src={getImageUrl(pendingBooking.details?.image_url)}
-                                                    alt="Hotel"
-                                                    className="w-full h-full object-cover"
-                                                    onError={(e) => { e.target.src = '/assets/default_hotel.png'; }}
-                                                />
-                                            </div>
-                                            <div className="flex-grow text-center md:text-left">
-                                                <h4 className="text-xl font-black">{pendingBooking.details?.hotel_name}</h4>
-                                                <p className="text-white/60 text-xs font-bold uppercase tracking-widest mt-1">{pendingBooking.details?.room_name}</p>
-                                                <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-4">
-                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                                                        <Clock size={12} className="text-indigo-200" /> {pendingBooking.booked_hours} Hours
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                                                        <Calendar size={12} className="text-indigo-200" /> {new Date(pendingBooking.check_in_date).toLocaleDateString()}
-                                                    </div>
-                                                    {pendingBooking.vehicle_needed && (
-                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                                                            <Truck size={12} className="text-indigo-200" /> Transformed Included
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="text-center md:text-right flex-shrink-0">
-                                                <p className="text-[10px] font-black opacity-60 uppercase tracking-widest mb-1">Grand Total</p>
-                                                <p className="text-4xl font-black italic">৳{pendingBooking.pricing?.grand_total}</p>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={handleConfirmPending}
-                                            disabled={confirmingBooking}
-                                            className="w-full bg-white text-indigo-600 py-5 rounded-2xl font-black text-sm shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest flex items-center justify-center gap-3 disabled:opacity-50"
-                                        >
-                                            {confirmingBooking ? <Loader size={20} className="animate-spin" /> : <><ShieldCheck size={20} /> Complete Payment & Confirm</>}
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        <PendingBookingCard onSuccess={() => fetchBookings()} />
 
                         {loading ? (
                             <div className="bg-white rounded-2xl shadow-sm p-12 flex flex-col items-center justify-center border border-gray-100">
@@ -683,7 +598,7 @@ const Dashboard = () => {
                                                     }}
                                                 />
                                                 {remaining && (
-                                                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                                                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-xs font-bold px-2 py-0.5 rounded-full">
                                                         ⏱ {remaining}
                                                     </div>
                                                 )}
@@ -693,19 +608,19 @@ const Dashboard = () => {
                                                 <div className="flex justify-between items-start mb-2">
                                                     <div>
                                                         <h3 className="text-lg font-black text-secondary tracking-tight">{booking.hotel_name}</h3>
-                                                        <p className="text-[10px] text-gray-400 flex items-center gap-1.5 font-bold uppercase tracking-wider mt-0.5">
+                                                        <p className="text-xs text-gray-400 flex items-center gap-1.5 font-bold uppercase tracking-wider mt-0.5">
                                                             <MapPin size={12} className="text-primary" /> {booking.room_type_name}
                                                         </p>
                                                     </div>
-                                                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border transition-colors ${getStatusColor(booking.booking_status)}`}>
+                                                    <span className={`px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-widest border transition-colors ${getStatusColor(booking.booking_status)}`}>
                                                         {booking.booking_status}
                                                     </span>
                                                 </div>
-                                                <p className="text-[10px] font-bold text-gray-500 mb-4 opacity-80">{getGuidance(booking.booking_status)}</p>
+                                                <p className="text-xs font-bold text-gray-500 mb-4 opacity-80">{getGuidance(booking.booking_status)}</p>
 
                                                 <div className="flex justify-between items-end mt-4">
                                                     <div className="bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-100">
-                                                        <div className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Total Paid</div>
+                                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Total Paid</div>
                                                         <div className="font-black text-secondary text-base italic">৳{booking.total_price}</div>
                                                     </div>
                                                     <div className="flex gap-2">
@@ -769,6 +684,21 @@ const Dashboard = () => {
                                                                 <Truck size={16} />
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setChatTarget({
+                                                                    id: booking.vendor_id,
+                                                                    name: booking.hotel_name,
+                                                                    contextId: booking.id,
+                                                                    contextType: 'hotel'
+                                                                });
+                                                            }}
+                                                            className="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                                            title="Message Vendor"
+                                                        >
+                                                            <MessageCircle size={16} />
+                                                        </button>
                                                         {booking.booking_status === 'active' && (
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setExtendingId(extendingId === booking.id ? null : booking.id); }}
@@ -797,7 +727,7 @@ const Dashboard = () => {
                                                                     e.stopPropagation();
                                                                     setReviewBooking(booking);
                                                                 }}
-                                                                className="px-3 py-1 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-all text-[10px] font-black flex items-center gap-1 shadow-sm"
+                                                                className="px-3 py-1 bg-yellow-400 text-white rounded-lg hover:bg-yellow-500 transition-all text-xs font-black flex items-center gap-1 shadow-sm"
                                                             >
                                                                 <Star size={12} fill="currentColor" /> RATE STAY
                                                             </button>
@@ -810,7 +740,7 @@ const Dashboard = () => {
                                                     <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2">
                                                         <div className="flex items-center gap-4">
                                                             <div className="flex-grow">
-                                                                <label className="text-[10px] font-black text-gray-400 uppercase mb-1 block">Add Hours</label>
+                                                                <label className="text-xs font-black text-gray-400 uppercase mb-1 block">Add Hours</label>
                                                                 <select
                                                                     value={extendHours}
                                                                     onChange={(e) => setExtendHours(parseInt(e.target.value))}
@@ -851,15 +781,15 @@ const Dashboard = () => {
                                     <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center">
                                         <TrendingUp size={20} />
                                     </div>
-                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5">Account Balance</span>
+                                    <span className="text-xs font-black uppercase tracking-[0.2em] bg-white/10 backdrop-blur-md px-2 py-0.5 rounded-full border border-white/5">Account Balance</span>
                                 </div>
-                                <div className="text-[9px] font-bold opacity-60 mb-1 uppercase tracking-widest">Available Credit</div>
+                                <div className="text-xs font-bold opacity-60 mb-1 uppercase tracking-widest">Available Credit</div>
                                 <div className="text-3xl font-black tracking-tight mb-4 italic">
                                     ৳{user?.balance?.toLocaleString() || '0'}
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <button className="bg-white text-secondary py-2 rounded-lg text-[9px] font-black uppercase tracking-wider hover:bg-white/90 transition-all">Add Funds</button>
-                                    <button className="bg-white/10 hover:bg-white/20 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border border-white/5">History</button>
+                                    <button className="bg-white text-secondary py-2 rounded-lg text-xs font-black uppercase tracking-wider hover:bg-white/90 transition-all">Add Funds</button>
+                                    <button className="bg-white/10 hover:bg-white/20 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all border border-white/5">History</button>
                                 </div>
                             </div>
                         </div>
@@ -886,24 +816,24 @@ const Dashboard = () => {
                                         >
                                             <div className="flex justify-between items-start mb-2">
                                                 <div className="flex items-center gap-2">
-                                                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${getRideStatusColor(ride.status)}`}>
+                                                    <div className={`px-2 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border ${getRideStatusColor(ride.status)}`}>
                                                         {String(ride.status || '').replace('_', ' ')}
                                                     </div>
-                                                    <div className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${(ride.booking_id && ride.booking_id > 0) ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-purple-100 text-purple-700 border border-purple-200'}`}>
+                                                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${(ride.booking_id && ride.booking_id > 0) ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-purple-100 text-purple-700 border border-purple-200'}`}>
                                                         {(ride.booking_id && ride.booking_id > 0) ? 'Booking' : 'Journey'}
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
-                                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Fare</div>
+                                                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Fare</div>
                                                     <div className="font-black text-primary italic text-sm">৳{ride.estimated_fare || ride.fare || 0}</div>
                                                 </div>
                                             </div>
-                                            <div className="text-[12px] text-gray-600 flex justify-between items-center">
+                                            <div className="text-sm text-gray-600 flex justify-between items-center">
                                                 <div>
                                                     <div className="font-bold text-secondary">{ride.pickup_address || 'Hotel'}</div>
-                                                    <div className="text-[10px] text-gray-400">to {ride.destination_address || ride.destination_name || 'Destination'}</div>
+                                                    <div className="text-xs text-gray-400">to {ride.destination_address || ride.destination_name || 'Destination'}</div>
                                                 </div>
-                                                <div className="text-right text-[10px] text-gray-400">
+                                                <div className="text-right text-xs text-gray-400">
                                                     {ride.created_at ? new Date(ride.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                                 </div>
                                             </div>
@@ -927,7 +857,7 @@ const Dashboard = () => {
                                         <Package size={24} />
                                     </div>
                                     <p className="text-sm text-gray-400 font-medium tracking-tight">No active orders</p>
-                                    <p className="text-[10px] text-gray-300 mt-1">Order food from your active booking</p>
+                                    <p className="text-xs text-gray-300 mt-1">Order food from your active booking</p>
                                 </div>
                             ) : (
                                 <div className="grid gap-4">
@@ -954,7 +884,7 @@ const Dashboard = () => {
                                                         <h3 className="font-bold text-secondary text-sm">Order #{order.id}</h3>
                                                         <span className="font-black text-primary text-xs tracking-tight">৳{order.total_amount}</span>
                                                     </div>
-                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
+                                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">
                                                         {order?.status === 'accepted' || order?.status === 'cooking'
                                                             ? `Cooking (eta: ${order?.estimated_min || 15}m)`
                                                             : order?.status || 'PENDING'}
@@ -1005,13 +935,13 @@ const Dashboard = () => {
                                                 <div className="min-w-0 flex-grow">
                                                     <div className="flex justify-between items-start gap-2">
                                                         <h4 className="font-bold text-secondary text-xs truncate">{event.title}</h4>
-                                                        <span className="text-[9px] font-black text-gray-300 uppercase whitespace-nowrap">
+                                                        <span className="text-xs font-black text-gray-300 uppercase whitespace-nowrap">
                                                             {new Date(event.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </span>
                                                     </div>
-                                                    <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5">{event.details}</p>
+                                                    <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{event.details}</p>
                                                     <div className="flex items-center gap-2 mt-1">
-                                                        <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${event.status === 'completed' || event.status === 'picked' ? 'bg-green-100 text-green-700' :
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded ${event.status === 'completed' || event.status === 'picked' ? 'bg-green-100 text-green-700' :
                                                             event.status === 'pending' || event.status === 'requested' || event.status === 'confirmed' ? 'bg-yellow-100 text-yellow-700' :
                                                                 'bg-gray-100 text-gray-500'
                                                             }`}>
@@ -1033,7 +963,7 @@ const Dashboard = () => {
                             </div>
                             <div className="relative z-10">
                                 <h3 className="text-2xl font-black mb-1 italic tracking-tighter">Premium Guest</h3>
-                                <p className="text-white/40 text-[10px] uppercase font-bold tracking-[0.2em] mb-6">Platinum Member Status</p>
+                                <p className="text-white/40 text-xs font-bold tracking-[0.2em] mb-6">Platinum Member Status</p>
 
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center bg-white/5 p-3 rounded-2xl backdrop-blur-sm">
@@ -1277,6 +1207,17 @@ const Dashboard = () => {
                                     <p className="text-2xl font-black text-secondary italic leading-none uppercase tracking-tighter">{selectedRide.vehicle_type}</p>
                                 </div>
                             </div>
+
+                            {selectedRide.status === 'requested' && (
+                                <div className="mt-4">
+                                    <button
+                                        onClick={() => handleCancelRide(selectedRide.id)}
+                                        className="w-full py-5 bg-red-50 text-red-600 rounded-2xl font-black uppercase tracking-widest border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                                    >
+                                        Cancel Ride Request
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 </div>
@@ -2189,6 +2130,15 @@ const Dashboard = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            <ChatModal
+                isOpen={!!chatTarget}
+                onClose={() => setChatTarget(null)}
+                otherUserId={chatTarget?.id}
+                otherUserName={chatTarget?.name}
+                contextId={chatTarget?.contextId}
+                contextType={chatTarget?.contextType}
+            />
         </div>
     );
 };

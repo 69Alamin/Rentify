@@ -162,7 +162,7 @@ const MobileBookingModal = ({ room, hotel, isOpen, isEmergency, onClose, onBooki
                     onClose();
                 }, 2000);
             } else if (data.require_login) {
-                window.location.href = '/login?return=/dashboard';
+                window.location.href = '/login?return=/';
             } else {
                 setError(data.message || 'Booking failed');
                 setLoading(false);

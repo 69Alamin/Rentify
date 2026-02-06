@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Utensils, Truck, Clock, MapPin, CheckCircle, XCircle, AlertCircle, ChevronRight, Loader, Package, User, Hash, DollarSign, Car, Navigation, ShieldCheck } from "lucide-react";
+import { Calendar, Utensils, Truck, Clock, MapPin, CheckCircle, XCircle, AlertCircle, ChevronRight, Loader, Package, User, Hash, DollarSign, Car, Navigation, ShieldCheck, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useModal } from "../../context/ModalContext";
 import { useNavigate } from "react-router-dom";
 import EmbeddedNavigation from "../../components/EmbeddedNavigation.jsx";
+import ChatModal from "../components/ChatModal.jsx";
 
 const MobileTrips = () => {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const MobileTrips = () => {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedRide, setSelectedRide] = useState(null);
     const [showNavigation, setShowNavigation] = useState(false);
+    const [chatTarget, setChatTarget] = useState(null); // { id, name, contextId, contextType }
 
     // Food Ordering State
     const [foodBooking, setFoodBooking] = useState(null);
@@ -67,7 +69,7 @@ const MobileTrips = () => {
     // Polling for selected ride updates (including driver location)
     useEffect(() => {
         let interval;
-        if (selectedRide && (selectedRide.status === 'on_the_way' || selectedRide.status === 'picked')) {
+        if (selectedRide && (selectedRide.status === 'assigned' || selectedRide.status === 'on_the_way' || selectedRide.status === 'picked')) {
             interval = setInterval(async () => {
                 try {
                     const res = await fetch('/api/rides/request.php', { credentials: 'include' });
@@ -300,6 +302,29 @@ const MobileTrips = () => {
         }
     };
 
+    const handleCancelRide = async (rideId) => {
+        showConfirm("Are you sure you want to cancel this ride request?", async () => {
+            try {
+                const res = await fetch('/api/rides/status.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ride_id: rideId, status: 'cancelled' }),
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showSuccess("Ride request cancelled");
+                    fetchAllData();
+                    setSelectedRide(null);
+                } else {
+                    showError(data.message || "Failed to cancel ride");
+                }
+            } catch (err) {
+                showError("Network error cancelling ride");
+            }
+        });
+    };
+
     const getStatusColor = (status) => {
         const colors = {
             confirmed: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
@@ -485,6 +510,17 @@ const MobileTrips = () => {
                                         </div>
                                         <span className="font-black text-accent">৳{order.total_amount}</span>
                                     </div>
+                                    <button
+                                        onClick={() => setChatTarget({
+                                            id: order.vendor_id,
+                                            name: order.hotel_name,
+                                            contextId: order.id,
+                                            contextType: 'food'
+                                        })}
+                                        className="w-full mt-3 bg-white/5 py-3 rounded-2xl border border-white/5 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 active:bg-white/10"
+                                    >
+                                        <MessageCircle size={14} /> Message Vendor
+                                    </button>
                                 </div>
                             ))}
                         </motion.div>
@@ -750,6 +786,17 @@ const MobileTrips = () => {
                                         </button>
                                     )}
                                     <button
+                                        onClick={() => setChatTarget({
+                                            id: selectedBooking.vendor_id,
+                                            name: selectedBooking.hotel_name,
+                                            contextId: selectedBooking.id,
+                                            contextType: 'hotel'
+                                        })}
+                                        className="w-full py-4 bg-accent text-navy rounded-xl font-bold text-lg shadow-lg shadow-accent/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    >
+                                        <MessageCircle size={20} /> Message Vendor
+                                    </button>
+                                    <button
                                         onClick={() => navigate(`/hotels/${selectedBooking.hotel_id}`)}
                                         className="w-full py-4 bg-white text-navy rounded-xl font-bold text-lg hover:bg-gray-100 transition-colors shadow-xl"
                                     >
@@ -857,7 +904,18 @@ const MobileTrips = () => {
                                                 <p className="font-bold text-white">{selectedRide.driver_name}</p>
                                                 <p className="text-xs text-gray-400">{selectedRide.driver_phone || 'Contact via app'}</p>
                                             </div>
-                                            {(selectedRide.status === 'on_the_way' || selectedRide.status === 'picked') && (
+                                            <button
+                                                onClick={() => setChatTarget({
+                                                    id: selectedRide.rider_id,
+                                                    name: selectedRide.driver_name,
+                                                    contextId: selectedRide.id,
+                                                    contextType: 'ride'
+                                                })}
+                                                className="p-3 bg-white/5 text-accent rounded-xl border border-white/5 active:bg-accent active:text-navy transition-all"
+                                            >
+                                                <MessageCircle size={20} />
+                                            </button>
+                                            {(selectedRide.status === 'assigned' || selectedRide.status === 'on_the_way' || selectedRide.status === 'picked') && (
                                                 <button
                                                     onClick={() => setShowNavigation(true)}
                                                     className="px-4 py-2 bg-accent text-navy rounded-lg font-black text-[10px] uppercase tracking-wider"
@@ -866,6 +924,17 @@ const MobileTrips = () => {
                                                 </button>
                                             )}
                                         </div>
+                                    </div>
+                                )}
+
+                                {selectedRide.status === 'requested' && (
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => handleCancelRide(selectedRide.id)}
+                                            className="w-full py-4 bg-red-500/10 text-red-500 rounded-xl font-black uppercase tracking-widest border border-red-500/20 active:bg-red-500 active:text-white transition-all"
+                                        >
+                                            Cancel Ride Request
+                                        </button>
                                     </div>
                                 )}
 
@@ -1176,6 +1245,16 @@ const MobileTrips = () => {
                     />
                 )}
             </AnimatePresence>
+
+            {/* Chat Modal Layer */}
+            <ChatModal
+                isOpen={!!chatTarget}
+                onClose={() => setChatTarget(null)}
+                otherUserId={chatTarget?.id}
+                otherUserName={chatTarget?.name}
+                contextId={chatTarget?.contextId}
+                contextType={chatTarget?.contextType}
+            />
         </div>
     );
 };

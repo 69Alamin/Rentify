@@ -153,7 +153,7 @@ const Home = () => {
                         </motion.p>
 
                         <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-                            <Link to="/hotels" className="px-8 py-4 bg-primary hover:scale-105 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-3">
+                            <Link to="/hotels" className="px-8 py-4 bg-primary hover:scale-105 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-3">
                                 <Search size={16} />
                                 Find Stays
                             </Link>
@@ -163,7 +163,7 @@ const Home = () => {
                                     onMouseEnter={() => setHoveringEmergency(true)}
                                     onMouseLeave={() => setHoveringEmergency(false)}
                                     disabled={findingEmergency}
-                                    className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-red-500/20 transition-all hover:-translate-y-0.5 flex flex-col items-center justify-center gap-1 disabled:bg-red-950/50 min-w-[200px] relative overflow-hidden"
+                                    className="px-8 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-red-500/20 transition-all hover:-translate-y-0.5 flex flex-col items-center justify-center gap-1 disabled:bg-red-950/50 min-w-[200px] relative overflow-hidden"
                                 >
                                     {/* Pulse Effect */}
                                     <span className="absolute inset-0 bg-white/20 animate-ping opacity-20 pointer-events-none" />
@@ -184,10 +184,10 @@ const Home = () => {
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
                                             className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-64 p-4 bg-white rounded-2xl shadow-2xl z-50 pointer-events-none border border-gray-100"
                                         >
-                                            <div className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                            <div className="text-xs font-black text-red-600 uppercase tracking-widest mb-2 flex items-center gap-2">
                                                 <AlertTriangle size={12} /> Priority Protocol
                                             </div>
-                                            <p className="text-[11px] text-gray-500 font-bold leading-relaxed">
+                                            <p className="text-xs text-gray-500 font-bold leading-relaxed">
                                                 One-click activation to locate and secure the absolute nearest verified stay using your live coordinates.
                                             </p>
                                             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-gray-100 rotate-45" />
@@ -195,7 +195,7 @@ const Home = () => {
                                     )}
                                 </AnimatePresence>
                             </div>
-                            <Link to="/map" className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
+                            <Link to="/map" className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white border border-white/10 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3">
                                 <MapPin size={16} />
                                 View Map
                             </Link>
@@ -252,7 +252,7 @@ const Home = () => {
                                     {/* VERIFIED BADGE */}
                                     <div className="absolute top-4 left-4 flex flex-col gap-2">
                                         {property.is_verified == 1 && (
-                                            <div className="bg-indigo-600/90 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
+                                            <div className="bg-indigo-600/90 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
                                                 <Shield size={10} fill="currentColor" /> Verified Stay
                                             </div>
                                         )}
@@ -268,24 +268,24 @@ const Home = () => {
                                     <div className="flex justify-between items-start mb-4">
                                         <div>
                                             <h3 className="text-xl font-black text-secondary tracking-tight mb-0.5 group-hover:text-primary transition-colors">{property.name}</h3>
-                                            <p className="text-[10px] text-gray-400 flex items-center gap-1 font-black uppercase tracking-widest">
+                                            <p className="text-xs text-gray-400 flex items-center gap-1 font-black uppercase tracking-widest">
                                                 <MapPin size={12} className="text-primary" /> {property.city || 'Dhaka'}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-2xl font-black text-secondary italic leading-none">৳{property.price_per_hour}<span className="text-[10px] font-bold text-gray-400 opacity-60">/hr</span></div>
+                                            <div className="text-2xl font-black text-secondary italic leading-none">৳{property.price_per_hour}<span className="text-xs font-bold text-gray-400 opacity-60">/hr</span></div>
                                         </div>
                                     </div>
 
                                     <div className="flex gap-1.5 mb-6">
                                         {['High Speed WiFi', 'Instant Check-in'].map(tag => (
-                                            <span key={tag} className="px-2 py-1 bg-gray-50 text-[8px] font-black text-gray-400 uppercase tracking-widest rounded-lg border border-gray-100">
+                                            <span key={tag} className="px-2 py-1 bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-widest rounded-lg border border-gray-100">
                                                 {tag}
                                             </span>
                                         ))}
                                     </div>
 
-                                    <div className="w-full py-3.5 bg-secondary text-white rounded-xl font-black text-[9px] uppercase tracking-[0.2em] shadow-lg group-hover:bg-primary transition-all flex items-center justify-center gap-2">
+                                    <div className="w-full py-3.5 bg-secondary text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg group-hover:bg-primary transition-all flex items-center justify-center gap-2">
                                         Book Stay Now <ArrowRight size={14} />
                                     </div>
                                 </div>
@@ -342,7 +342,7 @@ const Home = () => {
                     <p className="text-base text-gray-400 mb-10 max-w-2xl mx-auto font-bold">
                         Book your next quick stay in minutes and add a pickup ride when you need it.
                     </p>
-                    <Link to="/hotels" className="inline-flex px-10 py-4 bg-primary text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
+                    <Link to="/hotels" className="inline-flex px-10 py-4 bg-primary text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:scale-105 transition-transform">
                         Explore Hotels <ArrowRight className="ml-2" size={16} />
                     </Link>
                 </div>
@@ -387,13 +387,13 @@ const Home = () => {
                                 <div className="space-y-3">
                                     <button
                                         onClick={handleEmergencyStay}
-                                        className="w-full py-4 bg-red-600 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-red-500/20 hover:bg-red-700 transition-all flex items-center justify-center gap-3"
+                                        className="w-full py-4 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-red-500/20 hover:bg-red-700 transition-all flex items-center justify-center gap-3"
                                     >
                                         Proceed to Sanctuary <ArrowRight size={16} />
                                     </button>
                                     <button
                                         onClick={() => setShowEmergencyModal(false)}
-                                        className="w-full py-4 bg-gray-50 text-gray-400 rounded-xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-gray-100 hover:text-secondary transition-all"
+                                        className="w-full py-4 bg-gray-50 text-gray-400 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-gray-100 hover:text-secondary transition-all"
                                     >
                                         Cancel Protocol
                                     </button>

@@ -29,7 +29,7 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
                 <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-primary/20">Q</div>
                 <div>
                     <h2 className="font-black italic tracking-tighter text-lg text-secondary">Quickrent</h2>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-black leading-none mt-0.5">Admin Console</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-widest font-black leading-none mt-0.5">Admin Console</p>
                 </div>
             </div>
 
@@ -56,7 +56,7 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
                                 <div className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-full"></div>
                             )}
                             <Icon size={18} className={`${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-secondary'} transition-colors`} />
-                            <span className="text-[11px] uppercase tracking-wider">{item.label}</span>
+                            <span className="text-xs uppercase tracking-wider">{item.label}</span>
                         </button>
                     );
                 })}

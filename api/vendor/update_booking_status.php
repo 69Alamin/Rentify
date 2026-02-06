@@ -108,6 +108,12 @@ if ($update_result) {
         db_query($activate_ride_sql, 'i', [$booking_id]);
     }
 
+    // NEW: If cancelled, cancel any active or pending ride requests
+    if ($new_status === 'cancelled') {
+        $cancel_ride_sql = "UPDATE journey_requests SET status = 'cancelled' WHERE booking_id = ? AND status NOT IN ('completed', 'cancelled')";
+        db_query($cancel_ride_sql, 'i', [$booking_id]);
+    }
+
     // 5. Update Room Status based on new booking status
     $getRoomSql = "SELECT room_id FROM bookings WHERE id = ?";
     $roomRes = db_query($getRoomSql, 'i', [$booking_id]);
