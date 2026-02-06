@@ -53,9 +53,18 @@ if (db_query($updateSql, 'i', [$booking_id])) {
         db_query("UPDATE rooms SET status = 'available' WHERE id = ?", 'i', [$roomData['room_id']]);
     }
 
+    // NEW: Cancel all uncompleted food orders for this booking
+    // Statuses that should be cancelled: 'requested', 'accepted', 'preparing', 'ready'
+    // Statuses that stay as is: 'delivered', 'cancelled'
+    $cancelFoodSql = "UPDATE food_orders 
+                      SET status = 'cancelled' 
+                      WHERE booking_id = ? 
+                      AND status NOT IN ('delivered', 'cancelled')";
+    db_query($cancelFoodSql, 'i', [$booking_id]);
+
     echo json_encode([
         'success' => true,
-        'message' => 'Checked out successfully!',
+        'message' => 'Checked out successfully! Any uncompleted food orders have been cancelled.',
         'booking_id' => $booking_id
     ]);
 } else {

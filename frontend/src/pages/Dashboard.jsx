@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Loader, AlertCircle, Plus, Truck, Navigation, CheckCircle, Package, Send, X, Zap, Star, ShieldCheck, Phone, TrendingUp, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import EmbeddedNavigation from '../components/EmbeddedNavigation.jsx';
 import { useModal } from '../context/ModalContext';
 import { MapContainer, TileLayer, Marker, Polyline, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -1239,17 +1240,7 @@ const Dashboard = () => {
                                         <button
                                             onClick={() => {
                                                 if (selectedRide.driver_lat && selectedRide.driver_lng) {
-                                                    const isPicked = selectedRide.status === 'picked';
-                                                    const destLat = isPicked ? selectedRide.destination_lat : selectedRide.driver_lat;
-                                                    const destLng = isPicked ? selectedRide.destination_lng : selectedRide.driver_lng;
-                                                    const startLat = isPicked ? selectedRide.driver_lat : '';
-                                                    const startLng = isPicked ? selectedRide.driver_lng : '';
-                                                    const label = isPicked ? 'Hotel Destination' : 'Rider Location';
-
-                                                    let url = `/map?lat=${destLat}&lng=${destLng}&label=${encodeURIComponent(label)}&rideId=${selectedRide.id}`;
-                                                    if (startLat && startLng) url += `&startLat=${startLat}&startLng=${startLng}`;
-
-                                                    navigate(url);
+                                                    setShowRideMap(true);
                                                 } else {
                                                     showError('Wait for rider to share location...');
                                                 }
@@ -1993,185 +1984,211 @@ const Dashboard = () => {
                 )}
             </AnimatePresence>
 
-            {/* Ride Map Modal (Leaflet) */}
+            {/* Ride Map Modal (Unified Navigation) */}
             <AnimatePresence>
                 {isBrowser && selectedRide && showRideMap && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[130] flex items-center justify-center px-4"
-                        onClick={() => setShowRideMap(false)}
-                    >
+                    <div className="fixed inset-0 z-[150] bg-secondary/90 backdrop-blur-xl flex items-center justify-center p-8">
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl p-4 relative overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
+                            initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                            className="bg-white w-full max-w-6xl h-[80vh] rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-white/20"
                         >
-                            <button
-                                onClick={() => setShowRideMap(false)}
-                                className="absolute top-4 right-4 w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50"
-                            >
-                                <X size={18} className="text-gray-500" />
-                            </button>
+                            {/* Left Side: Map */}
+                            <div className="flex-1 relative bg-navy overflow-hidden">
+                                <EmbeddedNavigation
+                                    pickupLat={selectedRide.pickup_latitude ?? selectedRide.pickup_lat}
+                                    pickupLng={selectedRide.pickup_longitude ?? selectedRide.pickup_lng}
+                                    dropoffLat={selectedRide.dropoff_latitude ?? selectedRide.destination_lat}
+                                    dropoffLng={selectedRide.dropoff_longitude ?? selectedRide.destination_lng}
+                                    navigationType={selectedRide.status === 'picked' ? 'dropoff' : 'pickup'}
+                                    customerName={selectedRide.driver_name}
+                                    onClose={() => setShowRideMap(false)}
+                                    isMobile={false}
+                                    remoteOrigin={selectedRide.driver_lat && selectedRide.driver_lng ? [parseFloat(selectedRide.driver_lat), parseFloat(selectedRide.driver_lng)] : null}
+                                    isCustomerView={true}
+                                    hideUI={true} // Cleaner integration
+                                />
+                                {/* Overlay for map controls if needed on mobile */}
+                                <button
+                                    onClick={() => setShowRideMap(false)}
+                                    className="absolute top-6 left-6 z-[1000] w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-secondary shadow-xl border border-gray-100 md:hidden"
+                                >
+                                    <X size={24} />
+                                </button>
+                            </div>
 
-                            {(() => {
-                                const pickupLat = Number(selectedRide.pickup_latitude ?? selectedRide.pickup_lat ?? 0);
-                                const pickupLng = Number(selectedRide.pickup_longitude ?? selectedRide.pickup_lng ?? 0);
-                                const driverLat = Number(selectedRide.driver_lat ?? selectedRide.rider_lat ?? 0);
-                                const driverLng = Number(selectedRide.driver_lng ?? selectedRide.rider_lng ?? 0);
-                                const hasPickup = pickupLat !== 0 && pickupLng !== 0;
-                                const hasDriver = driverLat !== 0 && driverLng !== 0;
-                                const fallbackLat = hasPickup ? pickupLat : (hasDriver ? driverLat : 23.8103);
-                                const fallbackLng = hasPickup ? pickupLng : (hasDriver ? driverLng : 90.4125);
-                                const centerLat = hasPickup && hasDriver ? (pickupLat + driverLat) / 2 : fallbackLat;
-                                const centerLng = hasPickup && hasDriver ? (pickupLng + driverLng) / 2 : fallbackLng;
-                                const km = hasPickup && hasDriver ? getDistanceKm(driverLat, driverLng, pickupLat, pickupLng) : null;
-                                const etaMin = km ? Math.max(2, Math.round((km / 25) * 60)) : null;
-
-                                return (
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
-                                        <div className="lg:col-span-2 h-[420px] rounded-2xl overflow-hidden border border-gray-100">
-                                            {(hasPickup || hasDriver) ? (
-                                                <MapContainer
-                                                    center={[centerLat, centerLng]}
-                                                    zoom={13}
-                                                    style={{ height: '100%', width: '100%' }}
-                                                    key={`${centerLat}-${centerLng}-${showRideMap}`}
-                                                >
-                                                    <TileLayer
-                                                        attribution='&copy; OpenStreetMap contributors'
-                                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                                    />
-                                                    {hasPickup && (
-                                                        <Marker position={[pickupLat, pickupLng]} icon={defaultIcon}>
-                                                            <Popup>
-                                                                <div>
-                                                                    <div className="font-bold text-sm">Pickup</div>
-                                                                    <div className="text-xs text-gray-600">{selectedRide.pickup_address || 'Pickup location'}</div>
-                                                                </div>
-                                                            </Popup>
-                                                        </Marker>
-                                                    )}
-                                                    {hasDriver && (
-                                                        <Marker position={[driverLat, driverLng]} icon={defaultIcon}>
-                                                            <Popup>
-                                                                <div>
-                                                                    <div className="font-bold text-sm">Driver</div>
-                                                                    <div className="text-xs text-gray-600">{selectedRide.driver_name || 'Assigned driver'}</div>
-                                                                </div>
-                                                            </Popup>
-                                                        </Marker>
-                                                    )}
-                                                    {hasPickup && hasDriver && (
-                                                        <Polyline positions={[[driverLat, driverLng], [pickupLat, pickupLng]]} color="#2563eb" weight={4} />
-                                                    )}
-                                                </MapContainer>
-                                            ) : (
-                                                <div className="h-full w-full flex items-center justify-center text-sm text-gray-500 bg-gray-50">Waiting for locations</div>
-                                            )}
+                            {/* Right Side: Telemetry & Info */}
+                            <div className="md:w-[400px] bg-slate-50 border-l border-gray-100 flex flex-col overflow-hidden">
+                                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-white">
+                                    <div>
+                                        <h3 className="text-xl font-black text-secondary italic tracking-tighter uppercase">Live Telemetry</h3>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Connection</span>
                                         </div>
-                                        <div className="bg-gray-50 rounded-2xl border border-gray-100 p-4 flex flex-col gap-3">
+                                    </div>
+                                    <button
+                                        onClick={() => setShowRideMap(false)}
+                                        className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400 hover:text-secondary hover:bg-gray-100 transition-all hidden md:flex"
+                                    >
+                                        <X size={20} />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-8 space-y-8 scrollbar-hide">
+                                    {/* Status Card */}
+                                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                                                <Navigation size={24} />
+                                            </div>
                                             <div>
-                                                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Status</div>
-                                                <div className={`inline-flex px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border ${getRideStatusColor(selectedRide.status)}`}>
-                                                    {String(selectedRide.status || '').replace('_', ' ')}
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Current Phase</p>
+                                                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-block ${getRideStatusColor(selectedRide.status)}`}>
+                                                    {selectedRide.status?.replace('_', ' ')}
                                                 </div>
                                             </div>
-                                            <div>
-                                                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Driver</div>
-                                                <div className="font-bold text-secondary">{selectedRide.driver_name || 'Not assigned yet'}</div>
-                                                <div className="text-xs text-gray-500">{selectedRide.driver_phone || 'Waiting for assignment'}</div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Estimated Fare</span>
+                                                <span className="text-lg font-black text-primary">৳{selectedRide.estimated_fare || selectedRide.fare}</span>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="bg-white rounded-xl p-3 border border-gray-100">
-                                                    <div className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-1">Distance</div>
-                                                    <div className="font-bold text-secondary text-base">{km ? km.toFixed(2) + ' km' : 'Waiting'}</div>
-                                                </div>
-                                                <div className="bg-white rounded-xl p-3 border border-gray-100">
-                                                    <div className="text-[11px] font-black text-gray-500 uppercase tracking-widest mb-1">ETA</div>
-                                                    <div className="font-bold text-secondary text-base">{etaMin ? `~${etaMin} min` : 'Waiting'}</div>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Pickup</div>
-                                                <div className="font-bold text-secondary text-sm">{selectedRide.pickup_address || 'Pickup location'}</div>
-                                                <div className="text-[11px] text-gray-500">Lat: {hasPickup ? pickupLat.toFixed(4) : 'N/A'}, Lng: {hasPickup ? pickupLng.toFixed(4) : 'N/A'}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-black text-gray-500 uppercase tracking-widest mb-1">Destination</div>
-                                                <div className="font-bold text-secondary text-sm">{selectedRide.destination_name || selectedRide.destination_address || 'Destination'}</div>
-                                                <div className="text-[11px] text-gray-500">Lat: {Number(selectedRide.dropoff_latitude ?? selectedRide.destination_lat ?? 0).toFixed(4)}, Lng: {Number(selectedRide.dropoff_longitude ?? selectedRide.destination_lng ?? 0).toFixed(4)}</div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Vehicle Class</span>
+                                                <span className="text-xs font-black text-secondary uppercase italic">{selectedRide.vehicle_type}</span>
                                             </div>
                                         </div>
                                     </div>
-                                );
-                            })()}
+
+                                    {/* Driver Profile */}
+                                    <div className="bg-secondary rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                            <Truck size={60} />
+                                        </div>
+                                        <div className="relative z-10">
+                                            <div className="flex items-center gap-4 mb-4">
+                                                <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center font-black text-2xl border border-white/10 uppercase">
+                                                    {selectedRide.driver_name?.charAt(0) || 'D'}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-lg italic leading-tight">{selectedRide.driver_name || 'Pilot'}</h4>
+                                                    <div className="flex items-center gap-1.5 mt-1 text-accent">
+                                                        <Star size={12} fill="currentColor" />
+                                                        <span className="text-xs font-black">{selectedRide.driver_rating || '5.0'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <a
+                                                href={`tel:${selectedRide.driver_phone}`}
+                                                className="w-full bg-white/10 hover:bg-white/20 py-3 rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5"
+                                            >
+                                                <Phone size={14} /> Contact Pilot
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    {/* Trip Detail Timeline */}
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                                <MapPin size={16} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pickup</p>
+                                                <p className="text-xs font-bold text-secondary truncate">{selectedRide.pickup_address || 'Current Location'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="ml-4 h-8 border-l-2 border-dashed border-gray-200"></div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                                <MapPin size={16} />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Destination</p>
+                                                <p className="text-xs font-bold text-secondary truncate">{selectedRide.destination_address || selectedRide.destination_name}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="p-8 bg-white border-t border-gray-100">
+                                    <button
+                                        onClick={() => setShowRideMap(false)}
+                                        className="w-full py-4 bg-secondary text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 transition-all italic"
+                                    >
+                                        Minimize Tracker
+                                    </button>
+                                </div>
+                            </div>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 
             {/* Property Review Modal */}
-            {reviewBooking && (
-                <div className="fixed inset-0 z-[140] bg-secondary/80 backdrop-blur-md flex items-center justify-center p-6">
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden p-8"
-                    >
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-yellow-500">
-                                <Star size={32} fill="currentColor" />
+            <AnimatePresence>
+                {reviewBooking && (
+                    <div className="fixed inset-0 z-[140] bg-secondary/80 backdrop-blur-md flex items-center justify-center p-6">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden p-8"
+                        >
+                            <div className="text-center mb-6">
+                                <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-yellow-500">
+                                    <Star size={32} fill="currentColor" />
+                                </div>
+                                <h2 className="text-2xl font-black text-secondary italic">Rate Your Stay</h2>
+                                <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">{reviewBooking.hotel_name}</p>
                             </div>
-                            <h2 className="text-2xl font-black text-secondary italic">Rate Your Stay</h2>
-                            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">{reviewBooking.hotel_name}</p>
-                        </div>
 
-                        <div className="space-y-6">
-                            <div className="flex justify-center gap-2">
-                                {[1, 2, 3, 4, 5].map(star => (
+                            <div className="space-y-6">
+                                <div className="flex justify-center gap-2">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <button
+                                            key={star}
+                                            onClick={() => setHotelRating(star)}
+                                            className={`transition-all ${star <= hotelRating ? 'text-yellow-400 scale-110' : 'text-gray-200'}`}
+                                        >
+                                            <Star size={32} fill={star <= hotelRating ? "currentColor" : "none"} />
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Your Experience</label>
+                                    <textarea
+                                        value={hotelComment}
+                                        onChange={(e) => setHotelComment(e.target.value)}
+                                        placeholder="Tell us about the room, service, and location..."
+                                        className="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary outline-none h-32 resize-none"
+                                    />
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
                                     <button
-                                        key={star}
-                                        onClick={() => setHotelRating(star)}
-                                        className={`transition-all ${star <= hotelRating ? 'text-yellow-400 scale-110' : 'text-gray-200'}`}
+                                        onClick={() => setReviewBooking(null)}
+                                        className="flex-1 py-4 text-gray-400 font-bold hover:text-secondary transition-colors"
                                     >
-                                        <Star size={32} fill={star <= hotelRating ? "currentColor" : "none"} />
+                                        Cancel
                                     </button>
-                                ))}
+                                    <button
+                                        onClick={handleReviewHotel}
+                                        disabled={submittingReview}
+                                        className="flex-2 px-8 py-4 bg-primary text-white rounded-2xl font-black italic shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
+                                    >
+                                        {submittingReview ? <Loader className="animate-spin" size={20} /> : 'SUBMIT REVIEW'}
+                                    </button>
+                                </div>
                             </div>
-
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Your Experience</label>
-                                <textarea
-                                    value={hotelComment}
-                                    onChange={(e) => setHotelComment(e.target.value)}
-                                    placeholder="Tell us about the room, service, and location..."
-                                    className="w-full p-4 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-primary outline-none h-32 resize-none"
-                                />
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    onClick={() => setReviewBooking(null)}
-                                    className="flex-1 py-4 text-gray-400 font-bold hover:text-secondary transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleReviewHotel}
-                                    disabled={submittingReview}
-                                    className="flex-2 px-8 py-4 bg-primary text-white rounded-2xl font-black italic shadow-lg shadow-primary/20 hover:scale-105 transition-all disabled:opacity-50"
-                                >
-                                    {submittingReview ? <Loader className="animate-spin" size={20} /> : 'SUBMIT REVIEW'}
-                                </button>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

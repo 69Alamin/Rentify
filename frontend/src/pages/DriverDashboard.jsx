@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useModal } from '../context/ModalContext';
+import EmbeddedNavigation from '../components/EmbeddedNavigation.jsx';
 
 const DriverDashboard = () => {
     const navigate = useNavigate();
@@ -21,6 +22,7 @@ const DriverDashboard = () => {
     const [updating, setUpdating] = useState(false);
     const [location, setLocation] = useState(null);
     const [showNavigation, setShowNavigation] = useState(false);
+    const [navigating, setNavigating] = useState(false);
     const [navigationType, setNavigationType] = useState(null); // 'pickup' or 'hotel'
     const locationRef = React.useRef(location);
 
@@ -324,21 +326,17 @@ const DriverDashboard = () => {
                                     </div>
 
                                     <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
-                                        <a
-                                            href={`https://www.google.com/maps/dir/?api=1&destination=${activeRide.pickup_lat},${activeRide.pickup_lng}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-bold transition-all border border-white/10"
+                                        <button
+                                            onClick={() => setNavigating(!navigating)}
+                                            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-black transition-all border ${navigating ? 'bg-accent text-navy border-accent' : 'bg-white/10 text-white border-white/10 hover:bg-white/20'}`}
                                         >
-                                            <Navigation size={14} /> Maps (Pickup)
-                                        </a>
+                                            <Navigation size={14} className={navigating ? 'animate-pulse' : ''} /> {navigating ? 'HIDE LIVE MAP' : 'VIEW LIVE MAP'}
+                                        </button>
                                         <a
-                                            href={`https://www.google.com/maps/dir/?api=1&destination=${activeRide.destination_lat},${activeRide.destination_lng}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-bold transition-all border border-white/10"
+                                            href={`tel:${activeRide.customer_phone || '000'}`}
+                                            className="bg-white/10 hover:bg-white/20 px-4 py-2.5 rounded-xl flex items-center gap-2 text-xs font-bold transition-all border border-white/10 lg:hidden"
                                         >
-                                            <MapPin size={14} /> Maps (Drop)
+                                            <Phone size={14} /> Call Client
                                         </a>
                                     </div>
                                 </div>
@@ -365,6 +363,25 @@ const DriverDashboard = () => {
                                     </div>
                                 </div>
                             </div>
+                        </motion.div>
+                    )}
+                    {activeRide && navigating && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="mb-6 overflow-hidden"
+                        >
+                            <EmbeddedNavigation
+                                pickupLat={activeRide.pickup_lat}
+                                pickupLng={activeRide.pickup_lng}
+                                dropoffLat={activeRide.destination_lat}
+                                dropoffLng={activeRide.destination_lng}
+                                navigationType={['picked'].includes(activeRide.status) ? 'dropoff' : 'pickup'}
+                                customerName={activeRide.customer_name}
+                                onClose={() => setNavigating(false)}
+                                isMobile={false}
+                            />
                         </motion.div>
                     )}
                 </AnimatePresence>

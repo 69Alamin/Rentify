@@ -1,12 +1,13 @@
 <?php
 header('Content-Type: application/json');
 // Allow common dev ports
-$allowed_origins = ['http://localhost:5173','http://localhost:5174','http://localhost:5175','http://localhost:5176','http://localhost:5177','http://127.0.0.1:5173'];
+// Allow dynamic origins for mobile testing
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-header('Access-Control-Allow-Origin: ' . (in_array($origin, $allowed_origins, true) ? $origin : 'http://localhost:5173'));
+// Always allow the specific origin requesting
+header("Access-Control-Allow-Origin: $origin");
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit();
 
@@ -39,6 +40,10 @@ if (db_query($sql, 'iiii', [$driver_id, $driver_id, $ride_id, $driver_id])) {
     if (($GLOBALS['db_affected_rows'] ?? 0) > 0) {
         // Set driver to BUSY
         db_query("UPDATE users SET online_status = 'busy' WHERE id = ?", 'i', [$driver_id]);
+        
+        // Realtime notification
+        update_realtime_status('ride', $ride_id, 'assigned');
+        
         echo json_encode(['success' => true, 'message' => 'Ride accepted successfully']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Ride already taken or temporarily locked']);

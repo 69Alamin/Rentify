@@ -52,6 +52,10 @@ if (db_query($sql, $types, $params)) {
     if ($status === 'completed' && ($user_type === 'driver' || $user_type === 'rider')) {
         db_query("UPDATE users SET online_status = 'online' WHERE id = ?", 'i', [$user_id]);
     }
+    
+    // Realtime notification
+    update_realtime_status('ride', $ride_id, $status);
+    
     echo json_encode(['success' => true, 'message' => 'Ride status updated']);
 } else {
     echo json_encode(['success' => false, 'message' => 'Failed to update ride status']);

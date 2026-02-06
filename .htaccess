@@ -16,4 +16,3 @@
 # Note: For production, protect sensitive files using Apache httpd.conf or web server configuration
 # .htaccess cannot use <Directory> blocks - those must be in the main Apache configuration
 
-

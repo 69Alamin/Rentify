@@ -1,6 +1,20 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import MainLayout from './components/layout/MainLayout';
+import MainLayout from './components/layout/MainLayout'; // Restore MainLayout
+// import DebugLayout from './components/layout/DebugLayout';
+import MobileLayout from './mobile/layout/MobileLayout';
+import useIsMobile from './hooks/useIsMobile';
+
 import Home from './pages/Home';
+import MobileHome from './mobile/pages/MobileHome';
+import MobileProfile from './mobile/pages/MobileProfile';
+import MobileHotels from './mobile/pages/MobileHotels';
+import MobileMap from './mobile/pages/MobileMap';
+import MobileTrips from './mobile/pages/MobileTrips';
+import MobileNotifications from './mobile/pages/MobileNotifications';
+import MobileHotelDetails from './mobile/pages/MobileHotelDetails';
+import MobileFoodService from './mobile/pages/MobileFoodService';
+import MobileAlternativeJourney from './mobile/pages/MobileAlternativeJourney';
+import MobileRiderDashboard from './mobile/pages/MobileRiderDashboard';
 import Hotels from './pages/Hotels';
 import HotelDetails from './pages/HotelDetails';
 import Dashboard from './pages/Dashboard';
@@ -26,56 +40,58 @@ import ScrollToTop from './components/ScrollToTop';
 
 
 function App() {
+  const { isMobile } = useIsMobile();
+
   return (
     <ModalProvider>
       <Router>
         <ScrollToTop />
         <Routes>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
-                  <Route path="hotels" element={<Hotels />} />
-                  <Route path="hotels/:id" element={<HotelDetails />} />
+          <Route path="/" element={isMobile ? <MobileLayout /> : <MainLayout />}>
+            <Route index element={isMobile ? <MobileHome /> : <Home />} />
+            <Route path="hotels" element={isMobile ? <MobileHotels /> : <Hotels />} />
+            <Route path="hotels/:id" element={isMobile ? <MobileHotelDetails /> : <HotelDetails />} />
 
-                  {/* Public/Shared */}
-                  <Route path="services" element={<Services />} />
-                  <Route path="about" element={<About />} />
-                  <Route path="map" element={<MapExplorer />} />
-                  <Route path="notifications" element={<Notifications />} />
+            {/* Public/Shared */}
+            <Route path="services" element={<Services />} />
+            <Route path="about" element={<About />} />
+            <Route path="map" element={isMobile ? <MobileMap /> : <MapExplorer />} />
+            <Route path="notifications" element={isMobile ? <MobileNotifications /> : <Notifications />} />
 
-                  {/* Authentication */}
-                  <Route path="login" element={<Login />} />
-                  <Route path="register" element={<Register />} />
+            {/* Authentication */}
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
 
-                  {/* Customer Routes */}
-                  <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="history" element={<OrderHistory />} />
-                    <Route path="food" element={<FoodService />} />
-                    <Route path="journey" element={<AlternativeJourney />} />
-                    <Route path="profile" element={<Profile />} />
-                  </Route>
-
-                  {/* Vendor Routes */}
-                  <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>
-                    <Route path="vendor/dashboard" element={<VendorDashboard />} />
-                  </Route>
-
-                  {/* Admin Routes */}
-                  <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                    <Route path="admin/dashboard" element={<AdminDashboard />} />
-                    <Route path="admin/analytics" element={<AIAnalytics />} />
-                  </Route>
-
-                  {/* Driver Routes */}
-                  <Route element={<ProtectedRoute allowedRoles={['driver', 'rider']} />}>
-                    <Route path="driver/dashboard" element={<DriverDashboard />} />
-                  </Route>
-                  <Route path="*" element={<div className="h-screen flex items-center justify-center text-2xl font-bold text-secondary">404 - Page Not Found</div>} />
+            {/* Customer Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="history" element={isMobile ? <MobileTrips /> : <OrderHistory />} />
+              <Route path="food" element={isMobile ? <MobileFoodService /> : <FoodService />} />
+              <Route path="journey" element={isMobile ? <MobileAlternativeJourney /> : <AlternativeJourney />} />
+              <Route path="profile" element={isMobile ? <MobileProfile /> : <Profile />} />
             </Route>
-          </Routes>
-        </Router>
-      </ModalProvider>
-    );
-  }
+
+            {/* Vendor Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['vendor']} />}>
+              <Route path="vendor/dashboard" element={<VendorDashboard />} />
+            </Route>
+
+            {/* Admin Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="admin/dashboard" element={<AdminDashboard />} />
+              <Route path="admin/analytics" element={<AIAnalytics />} />
+            </Route>
+
+            {/* Driver/Rider Routes */}
+            <Route element={<ProtectedRoute allowedRoles={['driver', 'rider']} />}>
+              <Route path="driver/dashboard" element={isMobile ? <MobileRiderDashboard /> : <DriverDashboard />} />
+            </Route>
+            <Route path="*" element={<div className="h-screen flex items-center justify-center text-2xl font-bold text-secondary">404 - Page Not Found</div>} />
+          </Route>
+        </Routes>
+      </Router>
+    </ModalProvider>
+  );
+}
 
 export default App;

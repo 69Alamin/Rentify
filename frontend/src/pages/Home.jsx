@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, Clock, Star, ArrowRight, Shield, Coffee, Zap, AlertTriangle, Loader, X } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 import { Link, useNavigate } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
 
 const fadeInUp = {
     hidden: { opacity: 0, y: 20 },

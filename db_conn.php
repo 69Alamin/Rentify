@@ -109,6 +109,21 @@ function db_query($query, $types = '', $params = []) {
         return $result;
     } catch (Throwable $e) {
         error_log("Database Error: " . $e->getMessage());
-        return false;
     }
+}
+
+function update_realtime_status($type, $id, $status) {
+    global $conn;
+
+    $sql = "INSERT INTO realtime_status (entity_type, entity_id, status) VALUES (?, ?, ?) 
+            ON DUPLICATE KEY UPDATE status = VALUES(status), updated_at = NOW(6)";
+    // We update updated_at explicitly to ensure it changes even if status matches (though usually status changes)
+    // Actually ON UPDATE CURRENT_TIMESTAMP only updates if row changes.
+    // So if we just refresh status, we need to force updated_at
+    
+    // Better:
+    $sql = "INSERT INTO realtime_status (entity_type, entity_id, status) VALUES (?, ?, ?) 
+            ON DUPLICATE KEY UPDATE status = VALUES(status), updated_at = NOW(6)";
+            
+    db_query($sql, 'siss', [$type, $id, $status, $status]);
 }

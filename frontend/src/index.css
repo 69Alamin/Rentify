@@ -2,13 +2,26 @@
 
 @theme {
   --font-sans: "Inter", "sans-serif";
-  --font-display: "Outfit", "sans-serif";
+  --font-display: "Playfair Display", "serif";
 
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-secondary: #0f172a;
-  --color-dark: #020617;
-  --color-light: #f8fafc;
+  /* HSL Color System */
+  --color-navy: hsl(222 47% 6%);
+  --color-navy-card: hsl(222 47% 8%);
+  --color-navy-border: hsl(222 30% 18%);
+  --color-foreground: hsl(210 40% 98%);
+  --color-primary: hsl(239 84% 67%);
+  --color-primary-hover: hsl(250 80% 60%);
+  --color-accent: hsl(24 95% 53%);
+  --color-accent-pink: hsl(340 82% 52%);
+  --color-muted: hsl(222 30% 18%);
+
+  /* Legacy Colors (Keep for backward compatibility) */
+  --color-secondary: hsl(222 47% 6%);
+  /* Mapped to Navy */
+  --color-dark: hsl(222 47% 6%);
+  /* Mapped to Navy */
+  --color-light: hsl(210 40% 98%);
+  /* Mapped to Foreground */
   --color-aura-purple: #8b5cf6;
   --color-aura-blue: #0ea5e9;
   --color-aura-green: #10b981;
@@ -17,6 +30,8 @@
   --shadow-aura-md: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
   --shadow-aura-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-aura-xl: 0 32px 64px -10px rgba(0, 0, 0, 0.15);
+  --shadow-card: 0 4px 24px -4px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 8px 32px -8px rgba(0, 0, 0, 0.5);
 
   --animate-fade-in: fadeIn 0.5s ease-out;
   --animate-slide-up: slideUp 0.5s ease-out;
@@ -72,6 +87,15 @@
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
   .aura-gradient-primary {
