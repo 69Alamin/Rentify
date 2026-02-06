@@ -84,7 +84,8 @@ const BottomNav = () => {
     ] : isVendor ? [
         { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/vendor/dashboard?category=all', protected: true },
         { id: 'bookings', icon: Calendar, label: 'Booking', path: '/vendor/dashboard?category=bookings', protected: true, notification: pendingBookings },
-        { id: 'map', icon: MapIcon, label: 'Map', path: '/map' },
+        { id: 'hotels', icon: Hotel, label: 'My Hotels', path: '/vendor/dashboard?category=hotels', protected: true },
+        { id: 'food', icon: ShoppingBag, label: 'Food', path: '/vendor/dashboard?category=food', protected: true },
         { id: 'messages', icon: MessageCircle, label: 'Messages', path: '/messages', protected: true, notification: unreadMessages },
         { id: 'profile', icon: User, label: 'Profile', path: '/vendor/dashboard?category=profile', protected: true },
     ] : [

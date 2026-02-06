@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Bell, Filter, Star, MapPin, Car } from 'lucide-react';
+import { Search, Bell, Filter, Star, MapPin, Car, Plane, Bus, ArrowRight } from 'lucide-react';
 import MobileHotelCard from '../components/MobileHotelCard';
 import { Link, useNavigate } from 'react-router-dom';
 import Logo from '../../components/ui/Logo';
@@ -11,6 +11,7 @@ const MobileHome = () => {
     const [hotels, setHotels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [featuredHotels, setFeaturedHotels] = useState([]);
+    const [recommendedHotels, setRecommendedHotels] = useState([]);
     const [notifications, setNotifications] = useState([]);
 
     const heroLines = [
@@ -39,6 +40,7 @@ const MobileHome = () => {
     useEffect(() => {
         const fetchHotels = async () => {
             try {
+                // Fetch General Hotels
                 const response = await fetch('/api/hotels.php');
                 const data = await response.json();
                 if (data.success) {
@@ -46,6 +48,13 @@ const MobileHome = () => {
                     // Randomly select 5 hotels for "Popular"
                     const shuffled = [...data.data].sort(() => 0.5 - Math.random());
                     setFeaturedHotels(shuffled.slice(0, 5));
+                }
+
+                // Fetch AI Recommended Stays
+                const recRes = await fetch('/api/hotels.php?recommended=true&limit=6');
+                const recData = await recRes.json();
+                if (recData.success) {
+                    setRecommendedHotels(recData.data);
                 }
             } catch (err) {
                 console.error("Failed to load hotels");
@@ -148,77 +157,75 @@ const MobileHome = () => {
                 </motion.h1>
             </div>
 
-            {/* Featured Section */}
-            <section className="mt-8">
-                <div className="px-6 mb-4 flex justify-between items-end">
-                    <h2 className="text-xl font-display font-bold text-white">Popular Stays</h2>
-                    <Link to="/hotels" className="text-accent text-sm font-medium">See All</Link>
-                </div>
-
-                {loading ? (
-                    <div className="px-6 flex gap-4 overflow-hidden">
-                        {[1, 2].map(i => (
-                            <div key={i} className="w-72 h-80 bg-navy-card rounded-2xl animate-pulse" />
-                        ))}
+            {/* AI Recommended Section */}
+            {recommendedHotels.length > 0 && (
+                <section className="mt-4">
+                    <div className="px-6 mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-display font-black text-white italic">AI Recommended</h2>
+                            <span className="bg-primary/20 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border border-primary/20 animate-pulse">Smart Pick</span>
+                        </div>
                     </div>
-                ) : (
-                    <div className="px-6 flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory py-4 pb-8">
-                        {featuredHotels.map((hotel, idx) => (
-                            <motion.div
-                                key={hotel.id}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.1 }}
-                                className="snap-center"
-                            >
-                                {/* Reusing the simpler card style for horizontal scroll, slightly modified inline or use the component */}
-                                <Link to={`/hotels/${hotel.id}`}>
-                                    <div className="w-64 h-80 relative rounded-2xl overflow-hidden bg-navy-light/50 border border-white/5 shadow-lg">
-                                        <img
-                                            src={hotel.image_url || '/assets/default_hotel.png'}
-                                            alt={hotel.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { e.target.src = '/assets/default_hotel.png'; }}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-navy/90 via-transparent to-transparent" />
 
-                                        <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full flex items-center gap-1">
-                                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                                            <span className="text-xs font-bold text-white">{hotel.rating || 'N/A'}</span>
-                                        </div>
-
-                                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                                            <h3 className="text-lg font-bold text-white mb-1 truncate">{hotel.name}</h3>
-                                            <div className="flex items-center gap-1 text-gray-400 mb-2">
-                                                <MapPin className="w-3 h-3" />
-                                                <span className="text-xs truncate">{hotel.location || hotel.address}</span>
-                                            </div>
-                                            <span className="text-xl font-bold text-accent">৳{hotel.price_per_hour}</span>
-                                            <span className="text-xs text-gray-400">/hr</span>
-                                        </div>
-                                    </div>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </div>
-                )}
-            </section>
-
-            {/* Alternative Journey Promo */}
-            <section className="px-6 mt-6 mb-2">
-                <Link to="/journey">
-                    <div className="relative p-6 rounded-3xl overflow-hidden shadow-lg border border-white/5 group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-navy-card transition-all group-hover:from-blue-600/30"></div>
-                        <div className="relative flex justify-between items-center z-10">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">New</span>
-                                </div>
-                                <h2 className="text-xl font-black text-white italic">Alternative Journey</h2>
-                                <p className="text-xs text-gray-300 mt-1 font-medium">Shared rides for smart travel.</p>
+                    <div className="px-6 flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 pb-6">
+                        {recommendedHotels.map((hotel, idx) => (
+                            <div key={hotel.id} className="w-48 flex-shrink-0 snap-center">
+                                <MobileHotelCard hotel={hotel} />
                             </div>
-                            <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 transform -rotate-6 group-hover:rotate-0 transition-transform">
-                                <Car className="text-white" size={24} />
+                        ))}
+                    </div>
+                </section>
+            )}
+
+            {/* Alternative Journey Promo - Enhanced */}
+            <section className="px-6 mt-6 mb-4">
+                <Link to="/journey">
+                    <div className="relative p-6 rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10 group bg-navy-card">
+                        {/* Animated background element */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 rounded-full blur-[80px] -mr-32 -mt-32 transition-all group-hover:bg-primary/30" />
+
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-[0.1em] shadow-lg shadow-primary/20">Smart Pickup</span>
+                                <div className="h-[1px] flex-grow bg-white/10" />
+                            </div>
+
+                            <h2 className="text-2xl font-black text-white italic tracking-tighter mb-3 leading-none">
+                                Missed your <span className="text-primary">Flight</span> or <span className="text-orange-400">Bus</span>?
+                            </h2>
+
+                            <p className="text-sm text-gray-300 font-medium mb-6 leading-relaxed">
+                                Don't panic. Stay at a verified nearby hotel and book a personal car straight to your destination. <span className="text-white font-bold">Safe, fast, and stress-free.</span>
+                            </p>
+
+                            <div className="flex items-center gap-4 py-4 px-2 bg-white/[0.03] rounded-3xl border border-white/5 mb-6">
+                                <div className="flex -space-x-2">
+                                    <div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center border-2 border-navy-card">
+                                        <Plane size={18} className="text-primary" />
+                                    </div>
+                                    <div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center border-2 border-navy-card text-orange-400">
+                                        <Bus size={18} />
+                                    </div>
+                                </div>
+                                <ArrowRight size={16} className="text-gray-600" />
+                                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center border-2 border-navy-card shadow-lg shadow-primary/20">
+                                    <Car size={18} className="text-white" />
+                                </div>
+                                <div className="flex-grow text-right pr-2">
+                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Alternative</span>
+                                    <span className="text-xs font-bold text-white uppercase tracking-tighter">Journey</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-black text-primary flex items-center gap-1.5 uppercase tracking-widest">
+                                    Book Now <ArrowRight size={14} />
+                                </span>
+                                <div className="flex gap-1">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className={`h-1 w-${i === 1 ? '4bg-primary' : '1bg-white/10'} rounded-full transition-all`} />
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

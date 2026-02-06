@@ -7,11 +7,19 @@ require_once __DIR__ . '/../db_conn.php';
 
 $mine = isset($_GET['mine']) && $_GET['mine'] == 'true';
 $search = isset($_GET['search']) ? sanitize($_GET['search']) : '';
+$recommended = isset($_GET['recommended']) && $_GET['recommended'] == 'true';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
 
 $whereClauses = [];
 $params = [];
 $types = '';
+
+// AI Confidence Logic (SQL Fragment)
+$aiConfidenceSql = "CASE 
+    WHEN (p.is_verified = 1 AND IFNULL(stock.room_count, 0) >= 2) THEN 'High'
+    WHEN (p.is_verified = 1 OR IFNULL(stock.room_count, 0) >= 2) THEN 'Medium'
+    ELSE 'Low'
+END as ai_confidence";
 
 if ($mine) {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
@@ -23,6 +31,10 @@ if ($mine) {
     $types .= 'i';
 } else {
     $whereClauses[] = "p.is_verified = 1 AND p.is_active = 1";
+    if ($recommended) {
+        // For recommendation, we might want to filter for High/Medium confidence
+        // but let's just mark them in the result for now or prioritize them.
+    }
 }
 
 if ($search) {
@@ -47,6 +59,14 @@ $typeSql = "IFNULL(NULLIF(p.hotel_type, ''), CASE
     WHEN p.name LIKE '%Business%' OR p.name LIKE '%Executive%' THEN 'Business'
     ELSE 'Hotel'
 END) as hotel_type";
+
+$stockSubquery = "LEFT JOIN (
+    SELECT rt2.hotel_id, COUNT(rooms2.id) as room_count
+    FROM room_types rt2
+    JOIN rooms rooms2 ON rt2.id = rooms2.room_type_id
+    WHERE rooms2.status = 'available'
+    GROUP BY rt2.hotel_id
+) stock ON p.id = stock.hotel_id";
 
 // Provide a synthetic property_type and derive a price_per_hour from room_types
 if ($mine) {
@@ -78,17 +98,20 @@ if ($mine) {
             p.has_gym,
             p.has_pool,
             p.has_laundry,
+            $aiConfidenceSql,
             MIN(rt.base_price_per_hour) AS price_per_hour,
             ROUND(AVG(pr.rating), 1) AS rating,
             COUNT(pr.id) as review_count
         FROM hotels p
         LEFT JOIN room_types rt ON p.id = rt.hotel_id
         LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
+        $stockSubquery
         $whereSQL
         GROUP BY p.id
         ORDER BY p.id DESC
         LIMIT ?";
 } else {
+    $order = $recommended ? "FIELD(ai_confidence, 'High', 'Medium', 'Low'), p.id DESC" : "p.id DESC";
     $sql = "SELECT 
             p.id, 
             p.name, 
@@ -107,15 +130,17 @@ if ($mine) {
             p.has_gym,
             p.has_pool,
             p.has_laundry,
+            $aiConfidenceSql,
             MIN(rt.base_price_per_hour) AS price_per_hour,
             ROUND(AVG(pr.rating), 1) AS rating,
             COUNT(pr.id) as review_count
         FROM hotels p
         LEFT JOIN room_types rt ON p.id = rt.hotel_id
         LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
+        $stockSubquery
         $whereSQL
         GROUP BY p.id
-        ORDER BY p.id DESC
+        ORDER BY $order
         LIMIT ?";
 }
 

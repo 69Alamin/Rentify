@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, MapPin, Clock, Star, ArrowRight, Shield, Coffee, Zap, AlertTriangle, Loader, X } from 'lucide-react';
+import { Search, MapPin, Clock, Star, ArrowRight, Shield, Coffee, Zap, AlertTriangle, Loader, X, Plane, Bus, Car } from 'lucide-react';
 import Logo from '../components/ui/Logo';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -16,6 +16,7 @@ const staggerContainer = {
 
 const Home = () => {
     const [hotels, setHotels] = useState([]);
+    const [recommendedHotels, setRecommendedHotels] = useState([]);
     const heroLines = [
         { lead: 'Book a room fast,', accent: 'ride to the door' },
         { lead: 'Check in by the hour,', accent: 'pay only for time' },
@@ -35,6 +36,13 @@ const Home = () => {
                 const data = await res.json();
                 if (data.success) {
                     setHotels(data.data || []);
+                }
+
+                // AI Recommended
+                const recRes = await fetch('/api/hotels.php?recommended=true&limit=3');
+                const recData = await recRes.json();
+                if (recData.success) {
+                    setRecommendedHotels(recData.data || []);
                 }
             } catch (err) {
                 console.error('Failed to load hotels');
@@ -227,77 +235,86 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* Popular Properties */}
-            <section className="py-20 bg-gray-50">
-                <div className="container mx-auto px-6">
-                    <div className="flex justify-between items-end mb-12">
-                        <div>
-                            <h2 className="text-4xl font-bold text-secondary mb-4">Top Picks Near You</h2>
-                            <p className="text-gray-600 text-lg">Quickrent’s most booked hotels for short stays.</p>
-                        </div>
-                        <Link to="/hotels" className="hidden md:flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all">
-                            View All <ArrowRight size={20} />
-                        </Link>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                        {popularHotels.map((property) => (
-                            <Link key={property.id} to={`/hotels/${property.id}`} className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100">
-                                <div className="relative h-64 overflow-hidden">
-                                    <img
-                                        src={getImageUrl(property.image_url)}
-                                        alt={property.name}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                    />
-                                    {/* VERIFIED BADGE */}
-                                    <div className="absolute top-4 left-4 flex flex-col gap-2">
-                                        {property.is_verified == 1 && (
-                                            <div className="bg-indigo-600/90 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-1.5 shadow-lg">
-                                                <Shield size={10} fill="currentColor" /> Verified Stay
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-sm flex items-center gap-1.5">
-                                        <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                                        <span className="text-xs font-black text-secondary">{property.rating || '4.8'}</span>
-                                    </div>
+            {/* AI Recommended Stays */}
+            {recommendedHotels.length > 0 && (
+                <section className="py-20 bg-dark relative overflow-hidden">
+                    <div className="container mx-auto px-6 relative z-10">
+                        <div className="flex justify-between items-end mb-12">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2 text-primary">
+                                    <Zap size={18} fill="currentColor" />
+                                    <span className="text-xs font-black uppercase tracking-[0.3em]">AI Selected Protocol</span>
                                 </div>
-
-                                <div className="p-6">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div>
-                                            <h3 className="text-xl font-black text-secondary tracking-tight mb-0.5 group-hover:text-primary transition-colors">{property.name}</h3>
-                                            <p className="text-xs text-gray-400 flex items-center gap-1 font-black uppercase tracking-widest">
-                                                <MapPin size={12} className="text-primary" /> {property.city || 'Dhaka'}
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className="text-2xl font-black text-secondary italic leading-none">৳{property.price_per_hour}<span className="text-xs font-bold text-gray-400 opacity-60">/hr</span></div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-1.5 mb-6">
-                                        {['High Speed WiFi', 'Instant Check-in'].map(tag => (
-                                            <span key={tag} className="px-2 py-1 bg-gray-50 text-xs font-black text-gray-400 uppercase tracking-widest rounded-lg border border-gray-100">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-
-                                    <div className="w-full py-3.5 bg-secondary text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-lg group-hover:bg-primary transition-all flex items-center justify-center gap-2">
-                                        Book Stay Now <ArrowRight size={14} />
-                                    </div>
-                                </div>
+                                <h2 className="text-4xl font-bold text-white mb-4">Recommended For You</h2>
+                                <p className="text-gray-400 text-lg">Machine learning insights prioritized these verified stays for your location.</p>
+                            </div>
+                            <Link to="/hotels" className="hidden md:flex items-center gap-2 text-primary font-bold hover:gap-3 transition-all">
+                                View Recommendations <ArrowRight size={20} />
                             </Link>
-                        ))}
-                    </div>
+                        </div>
 
-                    <Link to="/hotels" className="w-full md:hidden mt-8 py-3 bg-white border border-gray-200 text-secondary rounded-xl font-bold shadow-sm text-center block">
-                        View All Hotels
-                    </Link>
-                </div>
-            </section>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                            {recommendedHotels.map((property) => (
+                                <Link key={property.id} to={`/hotels/${property.id}`} className="group relative bg-white/[0.03] rounded-3xl overflow-hidden border border-white/10 hover:bg-white/[0.05] transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20">
+                                    <div className="relative h-72 overflow-hidden">
+                                        <img
+                                            src={getImageUrl(property.image_url)}
+                                            alt={property.name}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-dark via-transparent to-transparent opacity-60" />
+
+                                        {/* AI BADGE */}
+                                        <div className="absolute top-4 left-4 flex flex-col gap-2">
+                                            <div className="bg-primary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-xl shadow-primary/30">
+                                                <Zap size={10} fill="currentColor" /> AI Recommended
+                                            </div>
+                                            {property.is_verified == 1 && (
+                                                <div className="bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-white/20">
+                                                    <Shield size={10} fill="currentColor" /> Verified
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-2xl flex items-center gap-2">
+                                            <Star size={14} className="text-yellow-400 fill-yellow-400" />
+                                            <span className="text-xs font-black text-white">{property.rating || '4.8'}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-8">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div>
+                                                <h3 className="text-2xl font-black text-white tracking-tight mb-1 group-hover:text-primary transition-colors">{property.name}</h3>
+                                                <p className="text-xs text-white/40 flex items-center gap-2 font-black uppercase tracking-widest">
+                                                    <MapPin size={12} className="text-primary" /> {property.city || 'Dhaka'}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-2xl font-black text-white italic leading-none">৳{property.price_per_hour}<span className="text-xs font-bold text-white/40 opacity-60">/hr</span></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2 mb-8">
+                                            {['Express Check-in', 'Verified Stock'].map(tag => (
+                                                <span key={tag} className="px-3 py-1 bg-white/5 text-[9px] font-black text-white/40 uppercase tracking-widest rounded-full border border-white/5">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+
+                                        <div className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 group-hover:bg-primary-hover transition-all flex items-center justify-center gap-3">
+                                            Priority Booking <ArrowRight size={14} />
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* How It Works */}
 
             {/* How It Works */}
             <section className="py-20 bg-white">
@@ -330,7 +347,83 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* CTA Section */}
+            {/* Alternative Journey Promo - Desktop */}
+            <section className="py-24 bg-white overflow-hidden">
+                <div className="container mx-auto px-6">
+                    <Link to="/journey">
+                        <div className="relative p-12 rounded-[4rem] overflow-hidden shadow-2xl border border-gray-100 group bg-secondary">
+                            {/* Animated background element */}
+                            <div className="absolute top-0 right-0 w-[40rem] h-[40rem] bg-primary/10 rounded-full blur-[120px] -mr-64 -mt-64 transition-all group-hover:bg-primary/20" />
+
+                            <div className="relative z-10 flex flex-col lg:flex-row items-center gap-16">
+                                <div className="lg:w-1/2">
+                                    <div className="flex items-center gap-3 mb-8">
+                                        <span className="bg-primary text-white text-[10px] font-black px-4 py-1.5 rounded-full uppercase tracking-[0.2em] shadow-xl shadow-primary/20">Smart Connectivity</span>
+                                        <div className="h-[1px] w-20 bg-white/10" />
+                                    </div>
+
+                                    <h2 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter mb-6 leading-[0.9]">
+                                        Missed your <br />
+                                        <span className="text-primary">Flight</span> or <span className="text-orange-400">Bus</span>?
+                                    </h2>
+
+                                    <p className="text-xl text-gray-400 font-bold mb-10 leading-relaxed max-w-xl">
+                                        Stay at one of our verified safe-havens nearby, then book a personal ride <span className="text-white">straight to your final destination</span>. We've got your back.
+                                    </p>
+
+                                    <div className="inline-flex items-center gap-3 text-primary font-black uppercase tracking-[0.2em] text-sm group-hover:gap-5 transition-all">
+                                        Plan your alternative journey <ArrowRight size={20} />
+                                    </div>
+                                </div>
+
+                                <div className="lg:w-1/2 w-full">
+                                    <div className="relative p-10 bg-white/[0.03] rounded-[3rem] border border-white/5 backdrop-blur-sm">
+                                        <div className="grid grid-cols-3 gap-8 items-center">
+                                            <div className="flex flex-col items-center gap-4 group/item">
+                                                <div className="w-20 h-20 rounded-3xl bg-dark flex items-center justify-center border-2 border-white/5 shadow-2xl group-hover/item:border-primary/50 transition-all">
+                                                    <Plane size={32} className="text-primary" />
+                                                </div>
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Missed Flight</span>
+                                            </div>
+
+                                            <div className="flex justify-center flex-col items-center">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    {[1, 2, 3].map(i => (
+                                                        <div key={i} className="h-1 w-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: `${i * 0.2}s` }} />
+                                                    ))}
+                                                </div>
+                                                <ArrowRight size={24} className="text-gray-700" />
+                                                <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-2 animate-pulse">Smart Fix</span>
+                                            </div>
+
+                                            <div className="flex flex-col items-center gap-4 group/item">
+                                                <div className="w-24 h-24 rounded-[2rem] bg-primary flex items-center justify-center border-4 border-secondary shadow-2xl shadow-primary/30 group-hover/item:scale-110 transition-all">
+                                                    <Car size={40} className="text-white" />
+                                                </div>
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Direct Ride</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-10 pt-8 border-t border-white/5 flex items-center justify-between">
+                                            <div className="flex -space-x-3">
+                                                {[1, 2, 3, 4].map(i => (
+                                                    <div key={i} className="w-10 h-10 rounded-full bg-gray-800 border-2 border-secondary flex items-center justify-center text-[10px] font-black text-white">
+                                                        {i === 4 ? '+50' : <Zap size={14} className="text-primary" />}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-xs font-bold text-gray-400 block">Verified Alternative</span>
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">Journey Protocol</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Link>
+                </div>
+            </section>
             <section className="py-20 bg-dark relative overflow-hidden">
                 <div className="absolute inset-0">
                     <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent" />

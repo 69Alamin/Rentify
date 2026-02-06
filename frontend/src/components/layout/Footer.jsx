@@ -1,7 +1,11 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
+    const location = useLocation();
+    if (location.pathname.startsWith('/admin/')) return null;
+
     return (
         <footer className="bg-dark text-gray-300 pt-20 pb-10">
             <div className="container mx-auto max-w-7xl px-6">

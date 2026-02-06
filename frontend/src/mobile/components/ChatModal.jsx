@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, User, MessageCircle, Clock } from 'lucide-react';
 
@@ -63,14 +64,16 @@ const ChatModal = ({ isOpen, onClose, otherUserId, otherUserName, contextType = 
         } catch (e) { console.error('Chat send error', e); }
     };
 
-    return (
+    if (typeof document === 'undefined') return null;
+
+    return createPortal(
         <AnimatePresence>
             {isOpen && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[100] bg-navy/60 backdrop-blur-md flex items-end justify-center"
+                    className="fixed inset-0 md:top-28 z-[100] bg-navy/60 backdrop-blur-md flex items-end justify-center"
                 >
                     <motion.div
                         initial={{ y: "100%" }}
@@ -151,7 +154,8 @@ const ChatModal = ({ isOpen, onClose, otherUserId, otherUserName, contextType = 
                     </motion.div>
                 </motion.div>
             )}
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 };
 

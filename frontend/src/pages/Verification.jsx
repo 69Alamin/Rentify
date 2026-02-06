@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft, Shield, Upload, FileText, CheckCircle,
-    XCircle, Clock, AlertCircle, Loader, Award
+    XCircle, Clock, AlertCircle, Loader, Award, Lock, ScanLine
 } from 'lucide-react';
 
 const Verification = () => {
@@ -37,13 +37,13 @@ const Verification = () => {
         if (!file) return;
 
         if (file.size > 5 * 1024 * 1024) {
-            setMessage({ type: 'error', text: 'File too large. Maximum size is 5MB' });
+            setMessage({ type: 'error', text: 'PROTOCOL ALERT: File exceeds 5MB limit.' });
             return;
         }
 
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
         if (!allowedTypes.includes(file.type)) {
-            setMessage({ type: 'error', text: 'Invalid file type. Only JPG, PNG, and PDF allowed' });
+            setMessage({ type: 'error', text: 'FORMAT ERROR: Only JPG, PNG, and PDF allowed.' });
             return;
         }
 
@@ -62,13 +62,13 @@ const Verification = () => {
             const data = await res.json();
 
             if (data.success) {
-                setMessage({ type: 'success', text: 'Document uploaded successfully!' });
+                setMessage({ type: 'success', text: 'UPLOAD SUCCESS: Document securely archived.' });
                 fetchDocuments();
             } else {
-                setMessage({ type: 'error', text: data.message || 'Upload failed' });
+                setMessage({ type: 'error', text: data.message || 'UPLOAD FAILED: Server rejected payload.' });
             }
         } catch (err) {
-            setMessage({ type: 'error', text: 'Network error. Please try again' });
+            setMessage({ type: 'error', text: 'NETWORK OUTAGE: Connection disrupted.' });
         } finally {
             setUploading(false);
         }
@@ -76,18 +76,18 @@ const Verification = () => {
 
     const getDocumentInfo = (type) => {
         const info = {
-            'license': { title: 'Driving License', desc: 'Upload your valid driving license' },
-            'nid': { title: 'National ID', desc: 'Upload your NID card (front & back)' },
-            'trade_license': { title: 'Trade License', desc: 'Upload your business trade license' }
+            'license': { title: 'Driving Credentials', desc: 'Valid commercial or private license' },
+            'nid': { title: 'National Identity', desc: 'Government issued ID card (Both sides)' },
+            'trade_license': { title: 'Trade License', desc: 'Business authorization certificate' }
         };
-        return info[type] || { title: type, desc: '' };
+        return info[type] || { title: type.replace('_', ' '), desc: 'Official documentation' };
     };
 
     const getStatusBadge = (status) => {
         const badges = {
-            'verified': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle, label: 'Verified' },
-            'pending': { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20', icon: Clock, label: 'Pending Review' },
-            'rejected': { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20', icon: XCircle, label: 'Rejected' }
+            'verified': { bg: 'bg-emerald-500/10', text: 'text-emerald-400', border: 'border-emerald-500/20', icon: CheckCircle, label: 'VERIFIED' },
+            'pending': { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20', icon: Clock, label: 'AWAITING APPROVAL' },
+            'rejected': { bg: 'bg-rose-500/10', text: 'text-rose-400', border: 'border-rose-500/20', icon: XCircle, label: 'REJECTED' }
         };
         return badges[status] || badges['pending'];
     };
@@ -96,77 +96,102 @@ const Verification = () => {
         ? ['trade_license', 'nid']
         : user.role === 'driver' || user.role === 'rider'
             ? ['license', 'nid']
-            : ['nid']; // Customers only need NID
+            : ['nid'];
 
     const verifiedCount = documents.filter(d => d.is_verified === 1).length;
     const totalRequired = documentTypes.length;
+    const progress = (verifiedCount / totalRequired) * 100;
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-navy flex items-center justify-center">
-                <Loader className="animate-spin text-accent" size={40} />
+            <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center gap-4">
+                <Loader className="animate-spin text-primary" size={40} />
+                <p className="font-black tracking-[0.3em] text-[10px] text-slate-500 uppercase animate-pulse">Establishing Secure Connection...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-navy text-white">
+        <div className="min-h-screen bg-[#020617] text-slate-200 selection:bg-primary/30 font-sans">
             {/* Header */}
-            <div className="bg-gradient-to-b from-primary/20 to-navy border-b border-white/5">
-                <div className="max-w-6xl mx-auto px-8 py-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
+            <header className="sticky top-0 z-50 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-6 py-6">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="flex items-center gap-6 w-full md:w-auto">
                             <button
                                 onClick={() => navigate(-1)}
-                                className="p-3 bg-white/5 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                                className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 hover:scale-105 transition-all group"
                             >
-                                <ChevronLeft size={24} />
+                                <ChevronLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
                             </button>
                             <div>
-                                <h1 className="text-3xl font-black tracking-tight">Trust Center</h1>
-                                <p className="text-sm text-gray-400 font-medium mt-1">Identity Verification System</p>
+                                <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase flex items-center gap-3">
+                                    Trust <span className="text-primary not-italic tracking-tight">Center</span>
+                                    <Shield size={24} className="text-primary/50" />
+                                </h1>
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Identity Verification Protocol</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 bg-accent/10 border border-accent/20 rounded-2xl px-5 py-3">
-                            <Award className="text-accent" size={24} />
+
+                        <div className="flex items-center gap-6 w-full md:w-auto bg-white/[0.02] border border-white/5 rounded-2xl p-4 md:px-8 md:py-4">
+                            <div className="relative">
+                                <svg className="w-16 h-16 transform -rotate-90">
+                                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-white/5" />
+                                    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray="175.9" strokeDashoffset={175.9 - (175.9 * progress) / 100} className="text-primary shadow-[0_0_10px_rgba(255,107,0,0.5)] transition-all duration-1000" />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white">
+                                    {Math.round(progress)}%
+                                </div>
+                            </div>
                             <div>
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Verification Progress</p>
-                                <p className="text-xl font-black text-accent">{verifiedCount}/{totalRequired} Verified</p>
+                                <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] mb-1">Clearance Level</p>
+                                <p className="text-xl font-black text-white italic tracking-tight">{verifiedCount}/{totalRequired} VERIFIED</p>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="max-w-6xl mx-auto px-8 py-10">
-                {/* Message Box */}
-                {message.text && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`mb-6 p-4 rounded-xl border ${message.type === 'success'
-                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                            : 'bg-red-500/10 border-red-500/20 text-red-400'
-                            }`}
-                    >
-                        <p className="font-bold">{message.text}</p>
-                    </motion.div>
-                )}
+            <main className="max-w-7xl mx-auto px-6 py-12 space-y-12 animate-fade-in">
+                {/* Status Message */}
+                <AnimatePresence mode="wait">
+                    {message.text && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -20, height: 0 }}
+                            animate={{ opacity: 1, y: 0, height: 'auto' }}
+                            exit={{ opacity: 0, y: -20, height: 0 }}
+                            className={`rounded-2xl border px-6 py-4 flex items-center gap-4 shadow-2xl ${message.type === 'success'
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                }`}
+                        >
+                            {message.type === 'success' ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                            <p className="font-bold text-xs uppercase tracking-wider">{message.text}</p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {/* Info Banner */}
-                <div className="bg-accent/10 border border-accent/20 rounded-2xl p-6 mb-10 flex items-start gap-4">
-                    <AlertCircle className="text-accent flex-shrink-0 mt-1" size={28} />
-                    <div>
-                        <p className="text-lg font-bold text-white mb-2">Secure Your Account & Unlock Premium Features</p>
-                        <p className="text-sm text-gray-400 leading-relaxed">
-                            Upload your verification documents to build trust with our community. All documents are encrypted and stored securely.
-                            Verification typically takes 24-48 hours.
-                        </p>
+                {/* Secure Vault Info */}
+                <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 rounded-3xl p-8 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-12 opacity-5 rotate-12">
+                        <Lock size={200} />
+                    </div>
+                    <div className="flex items-start gap-6 relative z-10">
+                        <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-[0_0_30px_rgba(255,107,0,0.3)]">
+                            <Shield size={32} />
+                        </div>
+                        <div className="space-y-2 max-w-2xl">
+                            <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Encryption Protocol Active</h2>
+                            <p className="text-sm font-medium text-slate-400 leading-relaxed">
+                                All uploaded documentation is encrypted using AES-256 standards and stored in isolated secure containers.
+                                Verification processing typically completes within 24-48 hours of submission.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                {/* Document Cards Grid */}
-                <div className="grid grid-cols-2 gap-6 mb-10">
+                {/* Documents Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {documentTypes.map((docType) => {
                         const info = getDocumentInfo(docType);
                         const existingDoc = documents.find(d => d.document_type === docType);
@@ -175,100 +200,106 @@ const Verification = () => {
                         return (
                             <motion.div
                                 key={docType}
-                                whileHover={{ scale: 1.02 }}
-                                className="bg-navy-light border border-white/5 rounded-3xl p-8 hover:bg-white/5 transition-all"
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                className="group relative bg-white/[0.03] backdrop-blur-sm border border-white/5 rounded-[2.5rem] p-8 hover:bg-white/[0.05] hover:border-white/10 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5 cursor-default"
                             >
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent">
-                                            <FileText size={28} />
+                                {/* Holographic Corner Accent */}
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-bl from-white/5 to-transparent rounded-tr-[2.5rem] rounded-bl-[4rem] opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                <div className="flex items-start justify-between mb-8 relative z-10">
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-16 h-16 rounded-2xl bg-[#0F172A] border border-white/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-lg">
+                                            {docType === 'license' ? <Award size={28} /> :
+                                                docType === 'nid' ? <ScanLine size={28} /> :
+                                                    <FileText size={28} />}
                                         </div>
                                         <div>
-                                            <h3 className="text-xl font-bold text-white">{info.title}</h3>
-                                            <p className="text-sm text-gray-500 mt-1">{info.desc}</p>
+                                            <h3 className="text-xl font-black text-white italic tracking-tight uppercase">{info.title}</h3>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">{info.desc}</p>
                                         </div>
                                     </div>
+
+                                    {badge && (
+                                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${badge.bg} ${badge.text} ${badge.border} shadow-lg`}>
+                                            <badge.icon size={14} />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">{badge.label}</span>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {badge && (
-                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border ${badge.bg} ${badge.text} ${badge.border} mb-4`}>
-                                        <badge.icon size={16} />
-                                        <span className="text-xs font-black uppercase tracking-widest">{badge.label}</span>
-                                    </div>
-                                )}
-
                                 {existingDoc?.verification_notes && (
-                                    <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-4 mb-4">
-                                        <p className="text-sm text-red-400 font-medium">{existingDoc.verification_notes}</p>
+                                    <div className="mb-6 p-4 rounded-xl bg-rose-500/5 border border-rose-500/10 text-rose-400 text-xs font-bold uppercase tracking-wide flex items-start gap-3">
+                                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                        <span>Correction Required: {existingDoc.verification_notes}</span>
                                     </div>
                                 )}
 
-                                <label className="block">
+                                <div className="relative z-10">
                                     <input
                                         type="file"
+                                        id={`upload-${docType}`}
                                         accept=".jpg,.jpeg,.png,.pdf"
                                         onChange={(e) => handleFileUpload(e, docType)}
                                         disabled={uploading}
                                         className="hidden"
                                     />
-                                    <div className={`w-full py-4 rounded-xl border-2 border-dashed ${uploading ? 'border-gray-700 bg-gray-900/50' : 'border-accent/30 bg-accent/5 hover:bg-accent/10'} flex items-center justify-center gap-3 cursor-pointer transition-all`}>
+                                    <label
+                                        htmlFor={`upload-${docType}`}
+                                        className={`w-full h-32 rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-300 group/upload ${uploading
+                                                ? 'border-slate-700 bg-slate-900/50 cursor-not-allowed'
+                                                : 'border-white/10 bg-white/[0.02] hover:bg-primary/5 hover:border-primary/30'
+                                            }`}
+                                    >
                                         {uploading ? (
                                             <>
-                                                <Loader className="animate-spin" size={22} />
-                                                <span className="font-bold text-gray-400">Uploading...</span>
+                                                <Loader className="animate-spin text-slate-500" size={24} />
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Encrypting...</span>
                                             </>
                                         ) : (
                                             <>
-                                                <Upload size={22} className="text-accent" />
-                                                <span className="font-bold text-accent">
-                                                    {existingDoc ? 'Re-upload' : 'Upload'} Document
+                                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-slate-400 group-hover/upload:text-primary group-hover/upload:scale-110 transition-all">
+                                                    <Upload size={20} />
+                                                </div>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover/upload:text-white transition-colors">
+                                                    {existingDoc ? 'Update Document' : 'Initiate Upload'}
                                                 </span>
                                             </>
                                         )}
-                                    </div>
-                                </label>
+                                    </label>
 
-                                {existingDoc && (
-                                    <p className="text-xs text-gray-600 mt-3 text-center">
-                                        Uploaded on {new Date(existingDoc.created_at).toLocaleDateString()}
-                                    </p>
-                                )}
+                                    {existingDoc && (
+                                        <div className="text-center mt-4">
+                                            <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest">
+                                                Last Archive: {new Date(existingDoc.created_at).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
                             </motion.div>
                         );
                     })}
                 </div>
 
-                {/* Security Info */}
-                <div className="bg-navy-light/50 border border-white/5 rounded-2xl p-8">
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
-                        <Shield size={24} className="text-accent" />
-                        Security & Privacy
-                    </h3>
-                    <div className="grid grid-cols-3 gap-6">
-                        <div className="flex items-start gap-3">
-                            <CheckCircle size={20} className="text-emerald-400 flex-shrink-0 mt-1" />
-                            <div>
-                                <p className="font-bold text-white mb-1">End-to-End Encryption</p>
-                                <p className="text-sm text-gray-400">All documents are encrypted and stored securely</p>
-                            </div>
+                {/* Footer Security Badge */}
+                <div className="flex justify-center pt-8 border-t border-white/5 opacity-50">
+                    <div className="flex items-center gap-8">
+                        <div className="flex items-center gap-2">
+                            <Shield size={14} className="text-emerald-500" />
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">SSL Encrypted</span>
                         </div>
-                        <div className="flex items-start gap-3">
-                            <CheckCircle size={20} className="text-emerald-400 flex-shrink-0 mt-1" />
-                            <div>
-                                <p className="font-bold text-white mb-1">Fast Processing</p>
-                                <p className="text-sm text-gray-400">Verification typically takes 24-48 hours</p>
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-emerald-500" />
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manual Audit</span>
                         </div>
-                        <div className="flex items-start gap-3">
-                            <CheckCircle size={20} className="text-emerald-400 flex-shrink-0 mt-1" />
-                            <div>
-                                <p className="font-bold text-white mb-1">Multiple Formats</p>
-                                <p className="text-sm text-gray-400">Accepted: JPG, PNG, PDF (max 5MB)</p>
-                            </div>
+                        <div className="flex items-center gap-2">
+                            <ScanLine size={14} className="text-emerald-500" />
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">ISO 27001</span>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

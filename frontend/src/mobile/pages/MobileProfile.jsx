@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Phone, ChevronRight, LogOut, Shield, CreditCard, Bell, Settings, HelpCircle, FileText, X, Save, Lock, Loader } from 'lucide-react';
+import { User, Mail, Phone, ChevronRight, LogOut, Shield, CreditCard, Bell, Settings, HelpCircle, FileText, X, Save, Lock, Loader, TrendingUp } from 'lucide-react';
 import { useModal } from '../../context/ModalContext';
 
 const MobileProfile = () => {
@@ -194,6 +194,29 @@ const MobileProfile = () => {
                     <div className="flex-1 bg-navy-light rounded-xl p-3 border border-white/5 flex flex-col items-center justify-center gap-1">
                         <span className="text-emerald-400 font-bold text-lg">{stats.status}</span>
                         <span className="text-[10px] uppercase text-gray-500 tracking-wider">Status</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Wallet Card */}
+            <div className="px-6 mt-6">
+                <div className="bg-secondary p-6 rounded-2xl relative overflow-hidden shadow-xl border border-white/5">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 blur-3xl -mr-16 -mt-16"></div>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center">
+                                <TrendingUp size={20} className="text-white" />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-white/10 backdrop-blur-md px-2 py-1 rounded-full border border-white/5 text-white">Balance</span>
+                        </div>
+                        <div className="text-xs font-bold text-white/60 mb-1 uppercase tracking-widest">Available Credit</div>
+                        <div className="text-3xl font-black tracking-tight mb-4 italic text-white">
+                            ৳{user?.balance?.toLocaleString() || '0'}
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button className="bg-white text-secondary py-3 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-white/90 transition-all">Add Funds</button>
+                            <button className="bg-white/10 text-white py-3 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-white/20 transition-all border border-white/5">History</button>
+                        </div>
                     </div>
                 </div>
             </div>

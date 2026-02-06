@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Loader, Utensils, Archive, Plus, Trash2, CheckCircle } from 'lucide-react';
+import { Loader, Utensils, Archive, Trash2, CheckCircle, Clock, ShoppingBag } from 'lucide-react';
 import { useModal } from '../../context/ModalContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const FoodControl = () => {
     const { showSuccess, showError, showConfirm } = useModal();
@@ -65,70 +66,157 @@ const FoodControl = () => {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex gap-4 border-b border-gray-100 pb-2">
-                <button
-                    onClick={() => setActiveTab('orders')}
-                    className={`pb-2 px-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'orders' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-secondary'}`}
-                >
-                    Incoming Orders
-                </button>
-                <button
-                    onClick={() => setActiveTab('menu')}
-                    className={`pb-2 px-4 text-sm font-bold transition-colors border-b-2 ${activeTab === 'menu' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-secondary'}`}
-                >
-                    Global Menu
-                </button>
+        <div className="space-y-12 animate-fade-in">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div>
+                    <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none flex items-center gap-4 uppercase">
+                        <Utensils size={32} className="text-primary" />
+                        Supply Protocols
+                    </h2>
+                    <div className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mt-2">Global Nutritional Distribution Matrix</div>
+                </div>
+
+                <div className="flex bg-white/[0.03] backdrop-blur-xl p-1.5 rounded-2xl border border-white/10 self-start">
+                    {[
+                        { id: 'orders', label: 'Incoming Demands', icon: ShoppingBag },
+                        { id: 'menu', label: 'Sector Inventory', icon: Archive },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-3 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
+                                ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                                }`}
+                        >
+                            <tab.icon size={14} />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {loading ? <div className="flex justify-center py-12"><Loader className="animate-spin text-primary" /></div> : (
-                activeTab === 'orders' ? (
-                    <div className="space-y-4">
-                        {orders.length === 0 ? <p className="text-gray-400 text-center py-8">No orders yet</p> : orders.map(o => (
-                            <div key={o.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="font-bold text-secondary text-sm">#{o.id}</span>
-                                        <span className={`text-[10px] font-bold px-2 rounded ${o.status === 'delivered' ? 'bg-green-100 text-green-600' :
-                                            o.status === 'cooking' ? 'bg-orange-100 text-orange-600' : 'bg-yellow-100 text-yellow-600'
-                                            }`}>{o.status.toUpperCase()}</span>
+            <AnimatePresence mode='wait'>
+                {loading ? (
+                    <motion.div
+                        key="loader"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="py-24 flex flex-col items-center gap-4"
+                    >
+                        <Loader className="animate-spin text-primary" size={48} />
+                        <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Syncing Supply Data</span>
+                    </motion.div>
+                ) : activeTab === 'orders' ? (
+                    <motion.div
+                        key="orders"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-6"
+                    >
+                        {orders.length === 0 ? (
+                            <div className="py-24 text-center text-slate-500 font-black text-[10px] uppercase tracking-widest italic opacity-50">No active demand signatures detected.</div>
+                        ) : orders.map((o, idx) => (
+                            <motion.div
+                                key={o.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="bg-white/[0.03] backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 flex flex-col md:flex-row justify-between items-center group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                <div className="flex items-center gap-8 relative z-10 w-full md:w-auto mb-6 md:mb-0">
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Impact ID</div>
+                                        <div className="text-xl font-black text-white italic tracking-tighter group-hover:text-primary transition-colors">#{o.id}</div>
                                     </div>
-                                    <div className="text-xs text-gray-500">Order for <b>{o.customer_name}</b> at {o.hotel_name}</div>
+                                    <div className="h-10 w-px bg-white/10" />
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className={`px-4 py-1 rounded-full text-[8px] font-black tracking-widest uppercase border ${o.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                                o.status === 'cooking' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20 animate-pulse' :
+                                                    'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                }`}>{o.status}</span>
+                                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                <Clock size={12} className="text-primary" /> {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </div>
+                                        <div className="text-xs font-black text-white uppercase tracking-tighter leading-none italic">
+                                            Subject: <span className="text-primary">{o.customer_name}</span> @ {o.hotel_name}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
+
+                                <div className="flex gap-4 relative z-10 w-full md:w-auto">
                                     {o.status === 'pending' && (
-                                        <button onClick={() => updateOrderStatus(o.id, 'cooking')} className="bg-orange-500 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-orange-600">Start Cooking</button>
+                                        <button
+                                            onClick={() => updateOrderStatus(o.id, 'cooking')}
+                                            className="grow md:grow-0 px-8 py-3 rounded-2xl bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-orange-500/20 transition-all shadow-lg active:scale-95"
+                                        >
+                                            Initiate Preparation
+                                        </button>
                                     )}
                                     {o.status === 'cooking' && (
-                                        <button onClick={() => updateOrderStatus(o.id, 'delivered')} className="bg-green-500 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-green-600">Mark Delivered</button>
+                                        <button
+                                            onClick={() => updateOrderStatus(o.id, 'delivered')}
+                                            className="grow md:grow-0 px-8 py-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all shadow-lg active:scale-95"
+                                        >
+                                            Finalize Logistics
+                                        </button>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
+                    </motion.div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {items.length === 0 ? <p className="col-span-full text-gray-400 text-center py-8">No items found</p> : items.map(i => (
-                            <div key={i.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 group">
-                                <div className="flex justify-between items-start mb-2">
-                                    <h4 className="font-bold text-secondary">{i.name}</h4>
-                                    <span className="text-xs font-black text-primary">৳{i.price}</span>
+                    <motion.div
+                        key="menu"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+                    >
+                        {items.length === 0 ? (
+                            <div className="col-span-full py-24 text-center text-slate-500 font-black text-[10px] uppercase tracking-widest italic opacity-50">Sector inventory is currently void.</div>
+                        ) : items.map((i, idx) => (
+                            <motion.div
+                                key={i.id}
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: idx * 0.05 }}
+                                className="bg-white/[0.03] backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 group relative overflow-hidden"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                <div className="flex justify-between items-start mb-6 relative z-10">
+                                    <h4 className="text-xl font-black text-white italic tracking-tighter leading-none group-hover:text-primary transition-colors uppercase">{i.name}</h4>
+                                    <div className="text-sm font-black text-primary italic tracking-widest">৳{i.price}</div>
                                 </div>
-                                <p className="text-xs text-gray-400 mb-4 line-clamp-2">{i.description}</p>
-                                <div className="flex justify-between items-center border-t border-gray-50 pt-3">
+                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-8 line-clamp-2 leading-relaxed opacity-60 group-hover:opacity-100 transition-opacity">{i.description}</p>
+
+                                <div className="flex justify-between items-center bg-white/[0.02] -mx-8 -mb-8 px-8 py-6 border-t border-white/5 relative z-10 group-hover:bg-white/[0.04] transition-colors">
                                     <button
                                         onClick={() => toggleItem(i.id, i.is_available)}
-                                        className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${i.is_available ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}
+                                        className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest uppercase border transition-all ${i.is_available
+                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                            : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                            }`}
                                     >
-                                        {i.is_available ? 'AVAILABLE' : 'UNAVAILABLE'}
+                                        {i.is_available ? 'OPERATIONAL' : 'OFFLINE'}
                                     </button>
-                                    <button onClick={() => deleteItem(i.id)} className="text-gray-300 hover:text-red-500"><Trash2 size={16} /></button>
+                                    <button
+                                        onClick={() => deleteItem(i.id)}
+                                        className="w-10 h-10 rounded-xl bg-slate-500/10 text-slate-400 border border-slate-500/20 flex items-center justify-center hover:bg-rose-500/20 hover:text-rose-400 transition-all hover:rotate-90"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
-                    </div>
-                )
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

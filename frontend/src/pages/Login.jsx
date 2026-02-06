@@ -41,11 +41,10 @@ const Login = () => {
                 const params = new URLSearchParams(window.location.search);
                 const returnUrl = params.get('return') || location.state?.from?.pathname || location.state?.from;
 
-                if (returnUrl) {
-                    navigate(returnUrl, { replace: true });
-                } else if (data.user.type === 'admin') {
-                    navigate('/admin/dashboard');
-                } else if (data.user.type === 'vendor') {
+                const user = data.user;
+                if (user.user_type === 'admin') {
+                    navigate('/admin/dashboard', { replace: true });
+                } else if (user.user_type === 'vendor') {
                     navigate('/vendor/dashboard');
                 } else if (data.user.type === 'driver') {
                     navigate('/driver/dashboard');

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Loader, AlertTriangle, Check, X } from 'lucide-react';
+import { Calendar, Clock, Loader, Check, X } from 'lucide-react';
 import { useModal } from '../../context/ModalContext';
+import { motion } from 'framer-motion';
 
 const BookingControl = () => {
     const { showSuccess, showError, showConfirm } = useModal();
@@ -30,12 +31,11 @@ const BookingControl = () => {
             let body = { booking_id: id, action };
 
             if (action === 'cancel') {
-                // Use unified cancellation endpoint
                 url = '/api/bookings/cancel.php';
                 body = { booking_id: id };
 
                 showConfirm(
-                    'Are you sure you want to cancel this booking? This will refund the user (if applicable) and free the room.',
+                    'Execute full deployment rollback? This will trigger automated refund protocols and release sector occupancy.',
                     async () => {
                         try {
                             const res = await fetch(url, {
@@ -46,16 +46,16 @@ const BookingControl = () => {
                             });
                             const data = await res.json();
                             if (data.success) {
-                                showSuccess('Booking cancelled successfully');
+                                showSuccess('Operational rollback successful');
                                 fetchBookings();
                             } else {
                                 showError(data.message);
                             }
                         } catch (err) {
-                            showError('Action failed');
+                            showError('Protocol failure');
                         }
                     },
-                    'Confirm Admin Cancellation'
+                    'Confirm Operational Termination'
                 );
                 return;
             }
@@ -74,68 +74,108 @@ const BookingControl = () => {
                 showError(data.message);
             }
         } catch (err) {
-            showError('Action failed');
+            showError('Command failed');
         }
     };
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-xl font-bold text-secondary">Booking Control</h2>
+        <div className="space-y-8 animate-fade-in">
+            <div className="flex justify-between items-end">
+                <div>
+                    <h2 className="text-3xl font-black text-white italic tracking-tighter leading-none">DEPLOYMENT LOGS</h2>
+                    <div className="text-[10px] font-black text-primary uppercase tracking-[0.3em] mt-2">Active Extraction & Stay Protocols</div>
+                </div>
+            </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50/50">
-                            <tr className="border-b border-gray-100">
-                                <th className="py-4 px-6 font-black text-xs uppercase tracking-widest text-gray-400">ID</th>
-                                <th className="py-4 px-6 font-black text-xs uppercase tracking-widest text-gray-400">Guest & Hotel</th>
-                                <th className="py-4 px-6 font-black text-xs uppercase tracking-widest text-gray-400">Schedule</th>
-                                <th className="py-4 px-6 font-black text-xs uppercase tracking-widest text-gray-400">Status</th>
-                                <th className="py-4 px-6 font-black text-xs uppercase tracking-widest text-gray-400 text-right">Actions</th>
+            <div className="bg-white/[0.03] backdrop-blur-xl rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden">
+                <div className="overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/5">
+                                <th className="py-8 px-8 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500">ID / Vector</th>
+                                <th className="py-8 px-8 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500">Subject & Extraction point</th>
+                                <th className="py-8 px-8 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500 text-center">Protocol Window</th>
+                                <th className="py-8 px-8 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500 text-center">Status</th>
+                                <th className="py-8 px-8 font-black text-[10px] uppercase tracking-[0.3em] text-slate-500 text-right">Operations</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-white/[0.02]">
                             {loading ? (
-                                <tr><td colSpan="5" className="py-12 text-center"><Loader className="animate-spin inline text-primary" /></td></tr>
+                                <tr>
+                                    <td colSpan="5" className="py-24 text-center">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <Loader className="animate-spin text-primary" size={32} />
+                                            <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">Syncing Mission Data</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : bookings.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="py-24 text-center text-slate-500 font-black text-[10px] uppercase tracking-widest italic opacity-50">
+                                        No active deployments found in this sector.
+                                    </td>
+                                </tr>
                             ) : bookings.map(b => (
-                                <tr key={b.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="py-4 px-6 font-bold text-gray-400">
-                                        #{b.id}
-                                        {parseInt(b.is_emergency) === 1 && (
-                                            <span className="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded uppercase font-black tracking-wider">
-                                                SOS
-                                            </span>
-                                        )}
+                                <motion.tr
+                                    key={b.id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="hover:bg-white/[0.02] group transition-all"
+                                >
+                                    <td className="py-8 px-8">
+                                        <div className="flex items-center gap-3">
+                                            <span className="font-black text-xs text-slate-600 group-hover:text-primary transition-colors">#{b.id}</span>
+                                            {parseInt(b.is_emergency) === 1 && (
+                                                <span className="bg-rose-500/10 text-rose-500 text-[8px] px-2 py-0.5 rounded-full border border-rose-500/20 font-black tracking-tighter animate-pulse uppercase">
+                                                    CRITICAL SOS
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
-                                    <td className="py-4 px-6">
-                                        <div className="font-bold text-secondary">{b.hotel_name}</div>
-                                        <div className="text-xs text-gray-500">{b.user_name}</div>
-                                        <div className="text-[10px] text-gray-400">{b.room_type} Room {b.room_number}</div>
+                                    <td className="py-8 px-8">
+                                        <div className="font-black text-white italic uppercase tracking-tighter leading-none mb-2">{b.hotel_name}</div>
+                                        <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">{b.user_name}</div>
+                                        <div className="text-[9px] font-black text-primary uppercase tracking-tighter opacity-70 italic">{b.room_type} Room {b.room_number}</div>
                                     </td>
-                                    <td className="py-4 px-6 text-xs text-gray-500">
-                                        <div className="flex items-center gap-1"><Calendar size={12} /> {new Date(b.check_in_time).toLocaleDateString()}</div>
-                                        <div className="flex items-center gap-1 mt-1"><Clock size={12} /> {new Date(b.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(b.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                    <td className="py-8 px-8 text-center">
+                                        <div className="inline-flex flex-col items-center gap-1">
+                                            <div className="flex items-center gap-2 text-[10px] font-black text-white uppercase tracking-widest">
+                                                <Calendar size={12} className="text-primary" /> {new Date(b.check_in_time).toLocaleDateString()}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-[9px] font-black text-slate-500 tracking-tighter uppercase italic opacity-60">
+                                                <Clock size={12} /> {new Date(b.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} — {new Date(b.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td className="py-4 px-6">
-                                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${b.booking_status === 'confirmed' ? 'bg-green-100 text-green-600' :
-                                            b.booking_status === 'cancelled' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
+                                    <td className="py-8 px-8 text-center">
+                                        <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border inline-block ${b.booking_status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+                                            b.booking_status === 'cancelled' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20' :
+                                                'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                             }`}>{b.booking_status}</span>
                                     </td>
-                                    <td className="py-4 px-6 text-right">
-                                        <div className="flex justify-end gap-2">
+                                    <td className="py-8 px-8 text-right">
+                                        <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {b.booking_status === 'pending' && (
-                                                <button onClick={() => handleAction(b.id, 'approve')} className="p-2 text-green-500 hover:bg-green-50 rounded-lg" title="Approve">
-                                                    <Check size={16} />
+                                                <button
+                                                    onClick={() => handleAction(b.id, 'approve')}
+                                                    className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center hover:bg-emerald-500/20 transition-all shadow-lg"
+                                                    title="Approve Deployment"
+                                                >
+                                                    <Check size={18} />
                                                 </button>
                                             )}
                                             {b.booking_status !== 'cancelled' && b.booking_status !== 'completed' && (
-                                                <button onClick={() => handleAction(b.id, 'cancel')} className="p-2 text-red-500 hover:bg-red-50 rounded-lg" title="Cancel & Refund">
-                                                    <X size={16} />
+                                                <button
+                                                    onClick={() => handleAction(b.id, 'cancel')}
+                                                    className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500/20 transition-all shadow-lg"
+                                                    title="Operational Rollback"
+                                                >
+                                                    <X size={18} />
                                                 </button>
                                             )}
                                         </div>
                                     </td>
-                                </tr>
+                                </motion.tr>
                             ))}
                         </tbody>
                     </table>

@@ -4,6 +4,9 @@ import {
     Truck, Utensils, CreditCard, FileText,
     Bell, Settings, LogOut, Navigation
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import Logo from '../ui/Logo';
 
 const AdminSidebar = ({ activeTab, setActiveTab }) => {
     const menuItems = [
@@ -23,21 +26,19 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
     ];
 
     return (
-        <div className="w-64 bg-white h-screen fixed left-0 top-0 border-r border-gray-100 flex flex-col z-50 animate-fade-in shadow-sm">
+        <div className="w-64 bg-[#020617]/80 backdrop-blur-2xl h-screen fixed left-0 top-0 border-r border-white/5 flex flex-col z-50 animate-fade-in shadow-2xl">
             {/* Logo Area */}
-            <div className="p-6 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center font-bold text-lg text-white shadow-lg shadow-primary/20">Q</div>
-                <div>
-                    <h2 className="font-black italic tracking-tighter text-lg text-secondary">Quickrent</h2>
-                    <p className="text-xs text-gray-400 uppercase tracking-widest font-black leading-none mt-0.5">Admin Console</p>
-                </div>
+            <div className="p-8">
+                <Link to="/" className="flex items-center">
+                    <Logo isDark={true} showText={true} textColor="text-white" />
+                </Link>
             </div>
 
             {/* Navigation */}
-            <div className="flex-1 overflow-y-auto pt-2 px-4 space-y-1">
+            <div className="flex-1 overflow-y-auto py-4 px-4 space-y-2 custom-scrollbar">
                 {menuItems.map((item, idx) => {
                     if (item.type === 'divider') {
-                        return <div key={idx} className="h-px bg-gray-50 my-4 mx-2"></div>;
+                        return <div key={idx} className="h-[1px] bg-white/5 my-6 mx-4"></div>;
                     }
 
                     const Icon = item.icon;
@@ -47,29 +48,34 @@ const AdminSidebar = ({ activeTab, setActiveTab }) => {
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all relative group ${isActive
-                                ? 'bg-primary/5 text-primary font-bold'
-                                : 'text-slate-500 hover:bg-gray-50 hover:text-secondary font-medium'
+                            className={`w-full flex items-center gap-3.5 px-5 py-3.5 rounded-2xl transition-all relative group overflow-hidden ${isActive
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-slate-500 hover:bg-white/[0.03] hover:text-slate-200'
                                 }`}
                         >
                             {isActive && (
-                                <div className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-full"></div>
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute left-0 top-3 bottom-3 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(255,107,0,0.8)]"
+                                />
                             )}
-                            <Icon size={18} className={`${isActive ? 'text-primary' : 'text-slate-400 group-hover:text-secondary'} transition-colors`} />
-                            <span className="text-xs uppercase tracking-wider">{item.label}</span>
+                            <Icon size={18} className={`${isActive ? 'text-primary' : 'text-slate-600 group-hover:text-slate-300'} transition-colors duration-300`} />
+                            <span className={`text-[11px] uppercase tracking-[0.15em] font-black transition-all duration-300 ${isActive ? 'translate-x-1' : 'group-hover:translate-x-1'}`}>
+                                {item.label}
+                            </span>
                         </button>
                     );
                 })}
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-50">
+            <div className="p-6 border-t border-white/5">
                 <button
                     onClick={() => window.location.href = '/'}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all text-xs font-bold uppercase tracking-wide group"
+                    className="w-full flex items-center gap-3.5 px-5 py-4 rounded-2xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all text-[11px] font-black uppercase tracking-widest group border border-transparent hover:border-rose-500/20"
                 >
-                    <LogOut size={18} className="text-slate-400 group-hover:text-red-600 transition-colors" />
-                    <span>Exit Console</span>
+                    <LogOut size={18} className="text-slate-600 group-hover:text-rose-400 transition-colors" />
+                    <span>Terminate Session</span>
                 </button>
             </div>
         </div>

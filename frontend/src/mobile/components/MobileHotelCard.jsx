@@ -17,11 +17,16 @@ const MobileHotelCard = ({ hotel }) => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-navy via-transparent to-transparent opacity-90" />
 
-                <div className="absolute top-2 right-2">
-                    <div className="bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                <div className="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+                    <div className="bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-1 w-fit">
                         <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
                         <span className="text-[10px] font-bold text-white">{hotel.rating || 'N/A'}</span>
                     </div>
+                    {hotel.ai_confidence === 'High' && (
+                        <div className="bg-primary/80 backdrop-blur-md px-1.5 py-0.5 rounded-full flex items-center gap-1 w-fit shadow-[0_0_10px_rgba(79,70,229,0.4)]">
+                            <span className="text-[8px] font-black text-white uppercase tracking-tighter">★ AI RECOMMENDED</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-3">

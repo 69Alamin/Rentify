@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Search, ChevronRight, Clock, User, Loader } from 'lucide-react';
+import { MessageCircle, Search, ChevronRight, Clock, User, Loader, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatModal from '../components/ChatModal.jsx';
 
@@ -8,10 +8,21 @@ const MobileMessages = () => {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedConversation, setSelectedConversation] = useState(null);
+    const [adminContact, setAdminContact] = useState(null);
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
 
     useEffect(() => {
         fetchConversations();
         const interval = setInterval(fetchConversations, 20000); // 20s instead of 10s
+
+        // Fetch Admin Contact
+        fetch('/api/chat/get_admin.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) setAdminContact(data.data);
+            })
+            .catch(err => console.error('Admin fetch error', err));
+
         return () => clearInterval(interval);
     }, []);
 
@@ -42,9 +53,9 @@ const MobileMessages = () => {
     );
 
     return (
-        <div className="min-h-screen bg-navy text-white pb-28 font-sans">
+        <div className="min-h-screen bg-navy text-white pb-28 font-sans md:pt-28">
             {/* Header */}
-            <div className="bg-navy/95 backdrop-blur-xl px-6 pt-12 pb-6 border-b border-white/5 sticky top-0 z-10">
+            <div className="bg-navy/95 backdrop-blur-xl px-6 pt-12 pb-6 border-b border-white/5 sticky top-0 md:top-28 z-10">
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h1 className="text-2xl font-black text-white italic tracking-tight">Intelligence</h1>
@@ -70,6 +81,31 @@ const MobileMessages = () => {
 
             {/* List */}
             <div className="p-4 space-y-2">
+                {/* Admin Contact Button (Restricted to Vendor/Rider/Driver) */}
+                {adminContact && ['vendor', 'rider', 'driver'].includes(user.type) && (
+                    <button
+                        onClick={() => setSelectedConversation({
+                            other_user_id: adminContact.id,
+                            other_user_name: adminContact.name,
+                            context_type: 'general',
+                            context_id: 0
+                        })}
+                        className="w-full bg-gradient-to-r from-accent to-orange-500 rounded-[1.5rem] p-4 flex items-center justify-between shadow-lg shadow-accent/20 mb-4 active:scale-95 transition-transform"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center text-navy backdrop-blur-sm">
+                                <Shield size={24} strokeWidth={2.5} />
+                            </div>
+                            <div className="text-left">
+                                <h3 className="font-black text-navy text-sm uppercase tracking-wide">Contact Admin</h3>
+                                <p className="text-xs text-navy/70 font-bold">Priority Support Channel</p>
+                            </div>
+                        </div>
+                        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-navy shadow-sm">
+                            <ChevronRight size={20} />
+                        </div>
+                    </button>
+                )}
                 {filteredConversations.length === 0 ? (
                     <div className="py-20 text-center">
                         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-600">

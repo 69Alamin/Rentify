@@ -296,11 +296,6 @@ const Header = () => {
     const darkBgPages = ['/'];
     const isLightPage = !darkBgPages.includes(location.pathname);
 
-    // Hide header entirely on admin routes
-    if (location.pathname.startsWith('/admin/')) {
-        return null;
-    }
-
     // Pages that should have a transparent navbar initially
     // Remove /admin/dashboard from transparent list to enforce standard navbar behavior
     const transparentNavbarPages = ['/', '/vendor/dashboard', '/driver/dashboard', '/dashboard'];
@@ -334,9 +329,6 @@ const Header = () => {
     };
 
     // Helper to determine text color class
-    // On Home (not scrolled): white
-    // On Home (scrolled): white (on dark bg)
-    // On Light Page: secondary (dark)
     const getTextColor = () => {
         if (!isLightPage || isScrolled) return 'text-white';
         return 'text-secondary';
@@ -344,6 +336,11 @@ const Header = () => {
 
     const textColorClass = getTextColor();
     const isDarkLogo = isLightPage && !isScrolled;
+
+    // Hide header entirely on admin routes
+    if (location.pathname.startsWith('/admin/')) {
+        return null;
+    }
 
     return (
         <>
