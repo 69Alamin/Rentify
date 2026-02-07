@@ -158,7 +158,7 @@ if ($result) {
         // Normalize image URL for frontend (serve from Apache, not Vite)
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $baseUrl = "{$protocol}://{$host}/Rentify";
+        $baseUrl = "{$protocol}://{$host}/Quickrent";
         $defaultImage = $baseUrl . '/assets/default_hotel.png';
 
         $rawImage = trim((string)$row['image_url']);
@@ -172,7 +172,7 @@ if ($result) {
         // Fix localPath: do not double the base project folder if the URL contains it
         $urlPath = parse_url($normalized, PHP_URL_PATH) ?? '';
         // If project is in /Rentify/, ltrim it from the path to get relative file path
-        $relativeToRoot = ltrim(str_replace('/Rentify/', '/', $urlPath), '/');
+        $relativeToRoot = ltrim(str_replace('/Quickrent/', '/', $urlPath), '/');
         $localPath = __DIR__ . '/../' . $relativeToRoot;
 
         // Final decision: if it's already an absolute online URL, we use it.

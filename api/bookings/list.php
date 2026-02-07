@@ -36,7 +36,7 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = (int)$_SESSION['user_id'];
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$baseUrl = "{$protocol}://{$host}/Rentify";
+$baseUrl = "{$protocol}://{$host}/Quickrent";
 $defaultImage = $baseUrl . '/assets/default_hotel.png';
 
 function normalize_booking_image($raw, $hotel_id, $baseUrl, $defaultImage) {

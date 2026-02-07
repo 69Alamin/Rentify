@@ -165,7 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'upload_photo'
     $filepath = $upload_dir . $filename;
 
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        $photo_url = '/Rentify/assets/rider_photos/' . $filename;
+        $photo_url = '/Quickrent/assets/rider_photos/' . $filename;
         
         $sql = "UPDATE rider_profiles SET profile_photo_url = ? WHERE user_id = ?";
         $stmt = mysqli_prepare($conn, $sql);

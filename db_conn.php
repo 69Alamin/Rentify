@@ -4,7 +4,7 @@
 define('DB_HOST', 'localhost');
 define('DB_USER', 'root');
 define('DB_PASS', '');
-define('DB_NAME', 'rentify_db');
+define('DB_NAME', 'quickrent_db');
 
 $conn = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if (!$conn) {
@@ -31,7 +31,7 @@ function require_login() {
         if (function_exists('send_json')) {
             send_json(['success' => false, 'message' => 'Please login to continue', 'require_login' => true], 401);
         } else {
-            header('Location: /Rentify/auth/login.php');
+            header('Location: /Quickrent/auth/login.php');
             exit();
         }
     }

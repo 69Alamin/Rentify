@@ -9,7 +9,7 @@ $hotel_id = (int)($_GET['hotel_id'] ?? 0);
 
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$baseUrl = "{$protocol}://{$host}/Rentify";
+$baseUrl = "{$protocol}://{$host}/Quickrent";
 $defaultImage = $baseUrl . '/assets/food/default_food.svg';
 function normalize_image($row, $baseUrl, $defaultImage) {
     $raw = $row['image_url'] ?? '';
@@ -20,7 +20,7 @@ function normalize_image($row, $baseUrl, $defaultImage) {
     }
 
     // Check for file existence in the correct assets directory
-    $relativeAssetPath = str_replace([$baseUrl, '/Rentify'], '', $normalized);
+    $relativeAssetPath = str_replace([$baseUrl, '/Quickrent'], '', $normalized);
     $localPath = __DIR__ . '/../../' . ltrim($relativeAssetPath, '/');
 
     if (empty($raw) || !file_exists($localPath) || is_dir($localPath)) {

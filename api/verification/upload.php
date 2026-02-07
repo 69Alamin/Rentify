@@ -66,7 +66,7 @@ if (!move_uploaded_file($file['tmp_name'], $file_path)) {
 }
 
 // Save to database
-$file_url = '/Rentify/assets/rider_documents/' . $filename;
+$file_url = '/Quickrent/assets/rider_documents/' . $filename;
 $sql = "INSERT INTO rider_documents (rider_id, document_type, file_url, expiry_date, is_verified) 
         VALUES (?, ?, ?, ?, 0)";
 

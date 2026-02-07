@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'upload_docume
     $filepath = $upload_dir . $filename;
 
     if (move_uploaded_file($file['tmp_name'], $filepath)) {
-        $file_url = '/Rentify/assets/rider_documents/' . $filename;
+        $file_url = '/Quickrent/assets/rider_documents/' . $filename;
 
         // Save to database
         $sql = "INSERT INTO rider_documents (rider_id, document_type, file_url, expiry_date, is_verified)

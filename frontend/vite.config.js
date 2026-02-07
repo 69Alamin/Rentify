@@ -16,11 +16,11 @@ export default defineConfig({
     ],
     proxy: {
       '/api': {
-        target: 'http://localhost/Rentify',
+        target: 'http://localhost/Quickrent',
         changeOrigin: true,
       },
       '/assets': {
-        target: 'http://localhost/Rentify',
+        target: 'http://localhost/Quickrent',
         changeOrigin: true,
       },
     }

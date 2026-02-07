@@ -8,7 +8,7 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$baseUrl = "{$protocol}://{$host}/Rentify";
+$baseUrl = "{$protocol}://{$host}/Quickrent";
 $defaultImage = $baseUrl . '/assets/default_hotel.png';
 
 function normalize_image($raw, $id, $baseUrl, $defaultImage) {

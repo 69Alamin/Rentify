@@ -608,7 +608,7 @@ const MobileVendorDashboard = () => {
                                 <div className="space-y-4">
                                     <ProfileItem icon={<Mail size={16} />} label="Email Address" value={user.email} />
                                     <ProfileItem icon={<Phone size={16} />} label="Phone Number" value={user.phone || 'Not set'} />
-                                    <ProfileItem icon={<Building size={16} />} label="Business" value="Rentify Partner" />
+                                    <ProfileItem icon={<Building size={16} />} label="Business" value="Quickrent Partner" />
 
                                     <button
                                         onClick={() => navigate('/trust-center')}

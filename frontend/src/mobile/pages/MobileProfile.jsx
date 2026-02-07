@@ -282,7 +282,7 @@ const MobileProfile = () => {
 
             <div className="text-center mt-8 pb-4">
                 <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Version 1.0.2</p>
-                <p className="text-[9px] text-gray-700 mt-1">Made with ♥ by Rentify</p>
+                <p className="text-[9px] text-gray-700 mt-1">Made with ♥ by Quickrent</p>
             </div>
 
             {/* Edit Profile Sheet with Portal */}

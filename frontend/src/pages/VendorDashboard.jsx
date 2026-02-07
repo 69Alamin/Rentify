@@ -1007,7 +1007,7 @@ const VendorDashboard = () => {
                         <div className="max-w-4xl mx-auto">
                             <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8 mb-6">
                                 <h2 className="text-3xl font-black text-secondary mb-2 italic">{editingHotel ? 'Edit Property' : 'List a New Hotel'}</h2>
-                                <p className="text-gray-500 text-sm mb-8">{editingHotel ? `Update details for ${editingHotel.name}` : 'Fill in the details to add your hotel to Rentify'}</p>
+                                <p className="text-gray-500 text-sm mb-8">{editingHotel ? `Update details for ${editingHotel.name}` : 'Fill in the details to add your hotel to Quickrent'}</p>
 
                                 <form onSubmit={editingHotel ? handleUpdateHotel : handleAddHotel} className="space-y-8">
                                     {/* Basic Information Section */}
