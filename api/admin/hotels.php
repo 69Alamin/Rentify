@@ -11,8 +11,8 @@ $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
 
 if ($method === 'GET') {
-    $sql = "SELECT p.*, u.full_name as owner_name 
-            FROM hotels p 
+    $sql = "SELECT p.*, u.full_name as owner_name, p.amenities_list, p.amenities_count
+            FROM hotels_with_amenities p 
             LEFT JOIN users u ON p.vendor_id = u.id 
             ORDER BY p.created_at DESC";
     $res = db_query($sql);
@@ -20,6 +20,12 @@ if ($method === 'GET') {
     while($row = mysqli_fetch_assoc($res)) {
         $row['is_active'] = (bool)$row['is_active'];
         $row['is_verified'] = (bool)$row['is_verified'];
+        if (!empty($row['amenities_list'])) {
+            $row['amenities'] = array_map('trim', explode(',', $row['amenities_list']));
+        } else {
+            $row['amenities'] = [];
+        }
+        unset($row['amenities_list']);
         $hotels[] = $row;
     }
     echo json_encode(['success' => true, 'data' => $hotels]);

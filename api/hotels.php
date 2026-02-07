@@ -68,6 +68,48 @@ $stockSubquery = "LEFT JOIN (
     GROUP BY rt2.hotel_id
 ) stock ON p.id = stock.hotel_id";
 
+function build_amenity_flags($amenities_list) {
+    $flags = [
+        'has_wifi' => 0,
+        'has_parking' => 0,
+        'has_ac' => 0,
+        'has_elevator' => 0,
+        'has_restaurant' => 0,
+        'has_gym' => 0,
+        'has_pool' => 0,
+        'has_laundry' => 0
+    ];
+
+    if (!$amenities_list) {
+        return $flags;
+    }
+
+    $items = array_map('trim', explode(',', strtolower($amenities_list)));
+    $itemSet = array_flip($items);
+
+    $matchers = [
+        'has_wifi' => ['wifi', 'wi-fi', 'wireless'],
+        'has_parking' => ['parking', 'car park'],
+        'has_ac' => ['ac', 'air conditioning', 'air-condition'],
+        'has_elevator' => ['elevator', 'lift'],
+        'has_restaurant' => ['restaurant', 'dining'],
+        'has_gym' => ['gym', 'fitness'],
+        'has_pool' => ['pool', 'swimming'],
+        'has_laundry' => ['laundry', 'washing']
+    ];
+
+    foreach ($matchers as $flag => $keywords) {
+        foreach ($keywords as $keyword) {
+            if (isset($itemSet[$keyword])) {
+                $flags[$flag] = 1;
+                break;
+            }
+        }
+    }
+
+    return $flags;
+}
+
 // Provide a synthetic property_type and derive a price_per_hour from room_types
 if ($mine) {
     $sql = "SELECT 
@@ -90,19 +132,13 @@ if ($mine) {
             p.house_rules,
             p.min_booking_hours,
             p.max_booking_hours,
-            p.has_wifi,
-            p.has_parking,
-            p.has_ac,
-            p.has_elevator,
-            p.has_restaurant,
-            p.has_gym,
-            p.has_pool,
-            p.has_laundry,
+            p.amenities_list,
+            p.amenities_count,
             $aiConfidenceSql,
             MIN(rt.base_price_per_hour) AS price_per_hour,
             ROUND(AVG(pr.rating), 1) AS rating,
             COUNT(pr.id) as review_count
-        FROM hotels p
+        FROM hotels_with_amenities p
         LEFT JOIN room_types rt ON p.id = rt.hotel_id
         LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
         $stockSubquery
@@ -122,19 +158,13 @@ if ($mine) {
             p.longitude,
             p.is_active,
             $typeSql,
-            p.has_wifi,
-            p.has_parking,
-            p.has_ac,
-            p.has_elevator,
-            p.has_restaurant,
-            p.has_gym,
-            p.has_pool,
-            p.has_laundry,
+            p.amenities_list,
+            p.amenities_count,
             $aiConfidenceSql,
             MIN(rt.base_price_per_hour) AS price_per_hour,
             ROUND(AVG(pr.rating), 1) AS rating,
             COUNT(pr.id) as review_count
-        FROM hotels p
+        FROM hotels_with_amenities p
         LEFT JOIN room_types rt ON p.id = rt.hotel_id
         LEFT JOIN hotel_reviews pr ON p.id = pr.hotel_id
         $stockSubquery
@@ -187,6 +217,12 @@ if ($result) {
         }
         if (isset($row['is_active'])) $row['is_active'] = (int)$row['is_active'];
         if (isset($row['is_verified'])) $row['is_verified'] = (int)$row['is_verified'];
+
+        $flags = build_amenity_flags($row['amenities_list'] ?? '');
+        foreach ($flags as $key => $value) {
+            $row[$key] = $value;
+        }
+
         $hotels[] = $row;
     }
 } else {

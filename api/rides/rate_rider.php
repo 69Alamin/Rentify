@@ -27,7 +27,7 @@ if ($ride_id <= 0 || $rating < 1 || $rating > 5) {
 $user_id = $_SESSION['user_id'];
 
 // 1. Verify the ride belongs to the user and is completed
-$sql = "SELECT driver_id FROM journey_requests WHERE id = ? AND user_id = ? AND status = 'completed'";
+$sql = "SELECT rider_id FROM journey_requests WHERE id = ? AND user_id = ? AND status = 'completed'";
 $res = db_query($sql, 'ii', [$ride_id, $user_id]);
 $ride = mysqli_fetch_assoc($res);
 
@@ -36,21 +36,29 @@ if (!$ride) {
     exit();
 }
 
-$driver_id = $ride['driver_id'];
-
-// 2. Update the ride with the rating
-$update_ride = "UPDATE journey_requests SET user_rating = ? WHERE id = ?";
-if (db_query($update_ride, 'ii', [$rating, $ride_id])) {
-    
-    // 3. Re-calculate driver's average rating
-    $calc_sql = "SELECT AVG(user_rating) as avg_r FROM journey_requests WHERE driver_id = ? AND user_rating IS NOT NULL";
-    $calc_res = db_query($calc_sql, 'i', [$driver_id]);
-    $new_avg = mysqli_fetch_assoc($calc_res)['avg_r'] ?? 5.0;
-
-    db_query("UPDATE users SET rating_avg = ? WHERE id = ?", 'di', [$new_avg, $driver_id]);
-
-    echo json_encode(['success' => true, 'message' => 'Rating submitted successfully']);
-} else {
-    echo json_encode(['success' => false, 'message' => 'Failed to submit rating']);
+$driver_id = $ride['rider_id'];
+if (!$driver_id) {
+    echo json_encode(['success' => false, 'message' => 'Driver not assigned for this ride']);
+    exit();
 }
+
+// 2. Update the ride with the rating (keeps per-ride record)
+$update_ride = "UPDATE journey_requests SET user_rating = ? WHERE id = ?";
+if (!db_query($update_ride, 'ii', [$rating, $ride_id])) {
+    echo json_encode(['success' => false, 'message' => 'Failed to submit rating']);
+    exit();
+}
+
+// 3. Store normalized rating record
+$check_sql = "SELECT id FROM rider_ratings WHERE ride_id = ? AND user_id = ? LIMIT 1";
+$check_res = db_query($check_sql, 'ii', [$ride_id, $user_id]);
+$existing = $check_res ? mysqli_fetch_assoc($check_res) : null;
+
+if ($existing) {
+    db_query("UPDATE rider_ratings SET rating = ?, created_at = NOW() WHERE id = ?", 'ii', [$rating, $existing['id']]);
+} else {
+    db_query("INSERT INTO rider_ratings (rider_id, user_id, ride_id, rating, created_at) VALUES (?, ?, ?, ?, NOW())", 'iiii', [$driver_id, $user_id, $ride_id, $rating]);
+}
+
+echo json_encode(['success' => true, 'message' => 'Rating submitted successfully']);
 ?>

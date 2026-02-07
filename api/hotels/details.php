@@ -31,13 +31,55 @@ function normalize_image($raw, $id, $baseUrl, $defaultImage) {
     return $normalized;
 }
 
+function build_amenity_flags($amenities_list) {
+    $flags = [
+        'has_wifi' => 0,
+        'has_parking' => 0,
+        'has_ac' => 0,
+        'has_elevator' => 0,
+        'has_restaurant' => 0,
+        'has_gym' => 0,
+        'has_pool' => 0,
+        'has_laundry' => 0
+    ];
+
+    if (!$amenities_list) {
+        return $flags;
+    }
+
+    $items = array_map('trim', explode(',', strtolower($amenities_list)));
+    $itemSet = array_flip($items);
+
+    $matchers = [
+        'has_wifi' => ['wifi', 'wi-fi', 'wireless'],
+        'has_parking' => ['parking', 'car park'],
+        'has_ac' => ['ac', 'air conditioning', 'air-condition'],
+        'has_elevator' => ['elevator', 'lift'],
+        'has_restaurant' => ['restaurant', 'dining'],
+        'has_gym' => ['gym', 'fitness'],
+        'has_pool' => ['pool', 'swimming'],
+        'has_laundry' => ['laundry', 'washing']
+    ];
+
+    foreach ($matchers as $flag => $keywords) {
+        foreach ($keywords as $keyword) {
+            if (isset($itemSet[$keyword])) {
+                $flags[$flag] = 1;
+                break;
+            }
+        }
+    }
+
+    return $flags;
+}
+
 if ($id <= 0) {
     echo json_encode(['success' => false, 'message' => 'Invalid ID']);
     exit();
 }
 
 // Fetch hotel
-$sql = "SELECT * FROM hotels WHERE id = ? AND is_verified = 1 AND is_active = 1 LIMIT 1";
+$sql = "SELECT * FROM hotels_with_amenities WHERE id = ? AND is_verified = 1 AND is_active = 1 LIMIT 1";
 $result = db_query($sql, 'i', [$id]);
 
 if (!$result || mysqli_num_rows($result) === 0) {
@@ -49,6 +91,12 @@ $property = mysqli_fetch_assoc($result);
 
 // Normalize property image
 $property['image_url'] = normalize_image($property['image_url'] ?? '', $id, $baseUrl, $defaultImage);
+
+// Map amenities to legacy flags for backward compatibility
+$flags = build_amenity_flags($property['amenities_list'] ?? '');
+foreach ($flags as $key => $value) {
+    $property[$key] = $value;
+}
 
 // Fetch room types
 $sql_rooms = "SELECT rt.*, 

@@ -21,19 +21,24 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Determine wallet column
-$wallet_col = null;
-$col_res = db_query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME IN ('wallet_balance','balance')");
-if ($col_res) {
-    $cols = [];
-    while ($c = mysqli_fetch_assoc($col_res)) { $cols[] = $c['COLUMN_NAME']; }
-    if (in_array('wallet_balance', $cols, true)) $wallet_col = 'wallet_balance';
-    elseif (in_array('balance', $cols, true)) $wallet_col = 'balance';
-}
-
-$balance_select = $wallet_col ? ", $wallet_col AS balance" : ", 0 as balance";
-
-$sql = "SELECT id, full_name, email, phone, user_type, vehicle_model, number_plate, rating_avg, total_earnings, online_status, is_verified, max_passengers, luggage_support{$balance_select} FROM users WHERE id = ? LIMIT 1";
+$sql = "SELECT 
+            id,
+            full_name,
+            email,
+            phone,
+            user_type,
+            vehicle_model,
+            number_plate,
+            rating_avg,
+            total_earnings,
+            rider_online_status AS online_status,
+            is_verified,
+            max_passengers,
+            luggage_support,
+            COALESCE(wallet_balance, 0) AS balance
+        FROM user_profiles_complete
+        WHERE id = ?
+        LIMIT 1";
 $res = db_query($sql, 'i', [$user_id]);
 
 if ($row = mysqli_fetch_assoc($res)) {

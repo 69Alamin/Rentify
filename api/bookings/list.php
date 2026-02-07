@@ -60,17 +60,17 @@ function normalize_booking_image($raw, $hotel_id, $baseUrl, $defaultImage) {
 }
 
 $sql = "SELECT b.id, b.check_in_time, b.check_out_time, b.total_hours, b.total_price, b.booking_status, b.created_at, b.room_id,
-               r.room_number, 
-               rt.name AS room_type_name, 
-               p.id AS hotel_id, p.vendor_id,
-               p.name AS hotel_name, p.image_url, p.latitude, p.longitude,
-               (SELECT COUNT(*) FROM hotel_reviews WHERE booking_id = b.id) > 0 as reviewed
-        FROM bookings b
-        LEFT JOIN rooms r ON b.room_id = r.id
-        LEFT JOIN room_types rt ON (r.room_type_id = rt.id OR (b.room_id IS NULL AND rt.id = (SELECT room_type_id FROM rooms WHERE id = b.room_id LIMIT 1)))
-        LEFT JOIN hotels p ON rt.hotel_id = p.id
-        WHERE b.user_id = ?
-        ORDER BY b.created_at DESC";
+           b.room_number,
+           b.room_type_name,
+           p.id AS hotel_id, b.vendor_id,
+           b.hotel_name, p.image_url, p.latitude, p.longitude,
+           (SELECT COUNT(*) FROM hotel_reviews WHERE booking_id = b.id) > 0 as reviewed
+    FROM bookings_detailed b
+    LEFT JOIN rooms r ON b.room_id = r.id
+    LEFT JOIN room_types rt ON r.room_type_id = rt.id
+    LEFT JOIN hotels p ON rt.hotel_id = p.id
+    WHERE b.user_id = ?
+    ORDER BY b.created_at DESC";
 // Simplified JOIN approach:
 // bookings usually have room_id (from create script). if room_id is valid, we get room details.
 // if room_id is valid, room has room_type_id.

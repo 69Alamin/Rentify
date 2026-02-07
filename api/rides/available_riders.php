@@ -20,23 +20,24 @@ if (!isset($_SESSION['user_id'])) {
 
 // Get available riders (online drivers with good ratings)
 $sql = "SELECT 
-    u.id,
-    u.full_name,
-    u.phone,
-    u.rating_avg as rating,
-    u.is_verified,
-    u.vehicle_model,
-    u.last_lat,
-    u.last_lng,
-    u.online_status,
-    COUNT(DISTINCT jr.id) as completed_rides
+        u.id,
+        u.full_name,
+        u.phone,
+        s.rating_avg as rating,
+        u.is_verified,
+        u.vehicle_model,
+        u.last_lat,
+        u.last_lng,
+        u.online_status,
+        COALESCE(s.total_rides_completed, COUNT(DISTINCT jr.id)) as completed_rides
 FROM users u
+LEFT JOIN user_statistics s ON u.id = s.id
 LEFT JOIN journey_requests jr ON u.id = jr.rider_id AND jr.status = 'completed'
 WHERE u.user_type = 'rider' 
-  AND u.online_status = 'online'
-  AND (u.rating_avg >= 4 OR u.rating_avg IS NULL)
+    AND u.online_status = 'online'
+    AND (s.rating_avg >= 4 OR s.rating_avg IS NULL)
 GROUP BY u.id
-ORDER BY u.rating_avg DESC, u.created_at DESC
+ORDER BY s.rating_avg DESC, u.created_at DESC
 LIMIT 20";
 
 $result = db_query($sql);

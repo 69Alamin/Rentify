@@ -19,7 +19,7 @@ if ($method === 'GET') {
     
     // 1. Get hotel basic info
     $sql_hotel = "SELECT p.*, u.full_name as owner_name, u.email as owner_email, u.phone as owner_phone
-                  FROM hotels p
+                  FROM hotels_with_amenities p
                   LEFT JOIN users u ON p.vendor_id = u.id
                   WHERE p.id = ?";
     $res = db_query($sql_hotel, 'i', [$hotel_id]);
@@ -32,6 +32,12 @@ if ($method === 'GET') {
     
     $hotel['is_active'] = (bool)$hotel['is_active'];
     $hotel['is_verified'] = (bool)$hotel['is_verified'];
+    if (!empty($hotel['amenities_list'])) {
+        $hotel['amenities'] = array_map('trim', explode(',', $hotel['amenities_list']));
+    } else {
+        $hotel['amenities'] = [];
+    }
+    unset($hotel['amenities_list']);
     
     // 2. Get room types for this hotel
     $sql_room_types = "SELECT rt.*, 

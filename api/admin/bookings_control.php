@@ -14,15 +14,11 @@ if ($method === 'GET') {
     // Filters: status, date, search
     $status = $_GET['status'] ?? '';
     // Basic master list
-    $query = "SELECT b.id, b.check_in_time, b.check_out_time, b.total_price, b.booking_status, b.payment_status, b.is_emergency,
-                     u.full_name as user_name, u.email as user_email,
-                     p.name as hotel_name, r.room_number, rt.name as room_type
-              FROM bookings b
-              LEFT JOIN users u ON b.user_id = u.id
-              LEFT JOIN rooms r ON b.room_id = r.id
-              LEFT JOIN room_types rt ON r.room_type_id = rt.id
-              LEFT JOIN hotels p ON rt.hotel_id = p.id
-              ORDER BY b.is_emergency DESC, b.created_at DESC LIMIT 100";
+        $query = "SELECT b.id, b.check_in_time, b.check_out_time, b.total_price, b.booking_status, b.payment_status, b.is_emergency,
+                b.user_name, b.user_email,
+                b.hotel_name, b.room_number, b.room_type_name as room_type
+            FROM bookings_detailed b
+            ORDER BY b.is_emergency DESC, b.created_at DESC LIMIT 100";
               
     $res = db_query($query);
     $bookings = [];

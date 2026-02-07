@@ -28,20 +28,20 @@ $lat = isset($_GET['lat']) && $_GET['lat'] != 0 ? (float)$_GET['lat'] : null;
 $lng = isset($_GET['lng']) && $_GET['lng'] != 0 ? (float)$_GET['lng'] : null;
 
 // 1. Get Profile
-$profile_sql = "SELECT id, full_name, user_type, phone, online_status, rating_avg, vehicle_model, number_plate, max_passengers, luggage_support FROM users WHERE id = ?";
+$profile_sql = "SELECT id, full_name, user_type, phone, rider_online_status AS online_status, rating_avg, vehicle_model, number_plate, max_passengers, luggage_support FROM user_profiles_complete WHERE id = ?";
 $p_res = db_query($profile_sql, 'i', [$user_id]);
 $profile = mysqli_fetch_assoc($p_res);
 
 // 2. Get Earnings Stats
-$daily_sql = "SELECT SUM(fare) as earnings FROM journey_requests WHERE rider_id = ? AND status = 'completed' AND DATE(created_at) = CURDATE()";
+$daily_sql = "SELECT SUM(fare) as earnings FROM journey_requests_detailed WHERE rider_id = ? AND status = 'completed' AND DATE(created_at) = CURDATE()";
 $daily_res = db_query($daily_sql, 'i', [$user_id]);
 $daily = mysqli_fetch_assoc($daily_res)['earnings'] ?? 0;
 
-$weekly_sql = "SELECT SUM(fare) as earnings FROM journey_requests WHERE rider_id = ? AND status = 'completed' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+$weekly_sql = "SELECT SUM(fare) as earnings FROM journey_requests_detailed WHERE rider_id = ? AND status = 'completed' AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
 $weekly_res = db_query($weekly_sql, 'i', [$user_id]);
 $weekly = mysqli_fetch_assoc($weekly_res)['earnings'] ?? 0;
 
-$all_sql = "SELECT SUM(fare) as earnings, COUNT(id) as total_trips FROM journey_requests WHERE rider_id = ? AND status = 'completed'";
+$all_sql = "SELECT SUM(fare) as earnings, COUNT(id) as total_trips FROM journey_requests_detailed WHERE rider_id = ? AND status = 'completed'";
 $all_res = db_query($all_sql, 'i', [$user_id]);
 $all = mysqli_fetch_assoc($all_res);
 
@@ -56,7 +56,7 @@ $stats = [
 $rides = [];
 $rides_sql = "SELECT 
             jr.*,
-            u.full_name AS customer_name, u.phone AS customer_phone,
+            jr.customer_name, jr.customer_phone,
             jr.fare AS estimated_fare,
             jr.pickup_latitude AS pickup_lat,
             jr.pickup_longitude AS pickup_lng,
@@ -65,8 +65,7 @@ $rides_sql = "SELECT
             jr.destination_name AS destination_address,
             jr.rider_id AS driver_id,
             (6371 * acos(cos(radians(?)) * cos(radians(jr.pickup_latitude)) * cos(radians(jr.pickup_longitude) - radians(?)) + sin(radians(?)) * sin(radians(jr.pickup_latitude)))) AS distance_km
-        FROM journey_requests jr
-        JOIN users u ON jr.user_id = u.id
+        FROM journey_requests_detailed jr
         WHERE (jr.status = 'requested' AND (jr.rider_id IS NULL OR jr.rider_id = 0))
         OR jr.rider_id = ?
         ORDER BY 

@@ -31,8 +31,8 @@ $driver_id = $_SESSION['user_id'];
 
 // Get ride details to find customer
 $sql = "SELECT user_id, status, pickup_address, destination_name, rider_id 
-        FROM journey_requests 
-        WHERE id = ? AND rider_id = ?";
+    FROM journey_requests_detailed 
+    WHERE id = ? AND rider_id = ?";
 $res = db_query($sql, 'ii', [$ride_id, $driver_id]);
 $ride = mysqli_fetch_assoc($res);
 

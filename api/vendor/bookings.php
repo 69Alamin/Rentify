@@ -12,14 +12,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'vendor') {
 
 $vendor_id = $_SESSION['user_id'];
 
-$sql = "SELECT b.*, u.full_name as user_name, u.email as user_email, p.name as hotel_name, rt.name as room_type_name
-        FROM bookings b
-        JOIN users u ON b.user_id = u.id
-        JOIN rooms r ON b.room_id = r.id
-        JOIN room_types rt ON r.room_type_id = rt.id
-        JOIN hotels p ON rt.hotel_id = p.id
-        WHERE p.vendor_id = ?
-        ORDER BY b.is_emergency DESC, b.created_at DESC";
+$sql = "SELECT b.*, b.user_name, b.user_email, b.hotel_name, b.room_type_name
+    FROM bookings_detailed b
+    WHERE b.vendor_id = ?
+    ORDER BY b.is_emergency DESC, b.created_at DESC";
 
 $result = db_query($sql, 'i', [$vendor_id]);
 $bookings = [];

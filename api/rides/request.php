@@ -36,11 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Debug logging disabled for performance
 
     if ($user_type === 'admin') {
-        $sql = "SELECT jr.*, u.full_name as customer_name, d.full_name as driver_name 
-                FROM journey_requests jr 
-                JOIN users u ON jr.user_id = u.id 
-                LEFT JOIN users d ON jr.driver_id = d.id
-                ORDER BY jr.created_at DESC";
+        $sql = "SELECT jr.*, jr.customer_name, jr.rider_name AS driver_name
+            FROM journey_requests_detailed jr
+            ORDER BY jr.created_at DESC";
         $res = db_query($sql);
         if ($res) while($row = mysqli_fetch_assoc($res)) $rides[] = $row;
     } elseif ($user_type === 'driver' || $user_type === 'rider') {
@@ -53,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // We'll show ALL unassigned requested rides AND the driver's assigned rides
         $sql = "SELECT 
                     jr.*,
-                    u.full_name AS customer_name, u.phone AS customer_phone,
+                    jr.customer_name, jr.customer_phone,
                     jr.fare AS estimated_fare,
                     jr.pickup_latitude AS pickup_lat,
                     jr.pickup_longitude AS pickup_lng,
@@ -62,8 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     jr.destination_name AS destination_address,
                     jr.rider_id AS driver_id,
                     (6371 * acos(cos(radians(?)) * cos(radians(jr.pickup_latitude)) * cos(radians(jr.pickup_longitude) - radians(?)) + sin(radians(?)) * sin(radians(jr.pickup_latitude)))) AS distance_km
-                FROM journey_requests jr
-                JOIN users u ON jr.user_id = u.id
+                FROM journey_requests_detailed jr
                 WHERE (jr.status = 'requested' AND (jr.rider_id IS NULL OR jr.rider_id = 0))
                 OR jr.rider_id = ?
                 ORDER BY 
@@ -84,16 +81,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     } else {
         // Customer: show their ride requests with assigned rider
         $sql = "SELECT jr.*, jr.fare AS estimated_fare,
-                jr.pickup_latitude AS pickup_lat,
-                jr.pickup_longitude AS pickup_lng,
-                jr.dropoff_latitude AS destination_lat, 
-                jr.dropoff_longitude AS destination_lng,
-                jr.pickup_address,
-                d.full_name as driver_name, d.phone as driver_phone, d.last_lat as driver_lat, d.last_lng as driver_lng, d.rating_avg as driver_rating, d.is_verified as driver_verified, d.vehicle_model
-                FROM journey_requests jr 
-                LEFT JOIN users d ON jr.rider_id = d.id
-                WHERE jr.user_id = ?
-                ORDER BY jr.created_at DESC";
+            jr.pickup_latitude AS pickup_lat,
+            jr.pickup_longitude AS pickup_lng,
+            jr.dropoff_latitude AS destination_lat, 
+            jr.dropoff_longitude AS destination_lng,
+            jr.pickup_address,
+            d.full_name as driver_name, d.phone as driver_phone, u.last_lat as driver_lat, u.last_lng as driver_lng,
+            d.rating_avg as driver_rating, d.is_verified as driver_verified, d.vehicle_model
+            FROM journey_requests_detailed jr 
+            LEFT JOIN user_profiles_complete d ON jr.rider_id = d.id
+            LEFT JOIN users u ON jr.rider_id = u.id
+            WHERE jr.user_id = ?
+            ORDER BY jr.created_at DESC";
         $res = db_query($sql, 'i', [$user_id]);
         if ($res) while($row = mysqli_fetch_assoc($res)) $rides[] = $row;
     }
