@@ -86,7 +86,7 @@ const MobileVendorDashboard = () => {
             navigate('/dashboard');
             return;
         }
-        fetchData();
+        fetchData(true); // Initial fetch with loading state
 
         const interval = setInterval(() => {
             // Poll for New Content (Bookings & Food)
@@ -126,10 +126,10 @@ const MobileVendorDashboard = () => {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [navigate, activeTab]);
+    }, [navigate]); // Removed activeTab
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (isInitial = false) => {
+        if (isInitial) setLoading(true);
         try {
             const [propRes, userRes, bookRes, foodRes] = await Promise.all([
                 fetch('/api/hotels.php?mine=true', { credentials: 'include' }),
@@ -157,7 +157,7 @@ const MobileVendorDashboard = () => {
             console.error('FetchData Error:', err);
             setError('Failed to sync dashboard data.');
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
     };
 

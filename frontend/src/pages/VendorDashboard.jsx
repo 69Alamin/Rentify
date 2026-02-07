@@ -80,7 +80,7 @@ const VendorDashboard = () => {
             navigate('/dashboard'); // Common user dashboard
             return;
         }
-        fetchData();
+        fetchData(true); // Initial fetch with loading state
 
         // Polling for real-time updates (Bookings & Food)
         const interval = setInterval(() => {
@@ -120,10 +120,10 @@ const VendorDashboard = () => {
         }, 5000); // 5 seconds polling
 
         return () => clearInterval(interval);
-    }, [navigate, activeTab]);
+    }, [navigate]); // Removed activeTab to prevent re-running fetchData on tab change
 
-    const fetchData = async () => {
-        setLoading(true);
+    const fetchData = async (isInitial = false) => {
+        if (isInitial) setLoading(true);
         try {
             // Fetch Hotels
             const propRes = await fetch('/api/hotels.php?mine=true', { credentials: 'include' });
@@ -170,7 +170,7 @@ const VendorDashboard = () => {
             console.error('FetchData Error:', err);
             setError('Failed to sync dashboard data. Check backend connectivity.');
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
     };
 
