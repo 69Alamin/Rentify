@@ -75,8 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['action'] === 'save_profile'
         exit();
     }
 
+    // Normalize - DB expects 'motorbike'
+    if ($vehicle_type === 'bike') $vehicle_type = 'motorbike';
+
     // Validate vehicle type
-    if (!in_array($vehicle_type, ['bike', 'car', 'auto'])) {
+    if (!in_array($vehicle_type, ['motorbike', 'car', 'auto'])) {
         echo json_encode(['success' => false, 'message' => 'Invalid vehicle type']);
         exit();
     }

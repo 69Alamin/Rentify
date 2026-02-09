@@ -20,9 +20,9 @@ $dest_lat = (float)($input['dest_lat'] ?? 0);
 $dest_lng = (float)($input['dest_lng'] ?? 0);
 $vehicle_type = strtolower($input['vehicle_type'] ?? 'car');
 
-// Normalize aliases
-if ($vehicle_type === 'motorbike') {
-    $vehicle_type = 'bike';
+// Normalize aliases - DB expects 'motorbike'
+if ($vehicle_type === 'bike') {
+    $vehicle_type = 'motorbike';
 }
 
 if (!$pickup_lat || !$pickup_lng || !$dest_lat || !$dest_lng) {
@@ -41,8 +41,8 @@ function getDistance($lat1, $lon1, $lat2, $lon2) {
 }
 
 $distance = getDistance($pickup_lat, $pickup_lng, $dest_lat, $dest_lng);
-$base_fare = ($vehicle_type === 'bike') ? 50 : 100;
-$rate_per_km = ($vehicle_type === 'bike') ? 15 : 40;
+$base_fare = ($vehicle_type === 'motorbike') ? 50 : 100;
+$rate_per_km = ($vehicle_type === 'motorbike') ? 15 : 40;
 
 $estimated_fare = $base_fare + ($distance * $rate_per_km);
 

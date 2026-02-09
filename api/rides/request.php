@@ -187,7 +187,8 @@ $pickup_lng = (float)($input['pickup_lng'] ?? 0);
 $dest_addr = $input['destination_address'] ?? 'Destination';
 $dest_lat = (float)($input['dest_lat'] ?? 0);
 $dest_lng = (float)($input['dest_lng'] ?? 0);
-$vehicle_type = $input['vehicle_type'] ?? 'car';
+$vehicle_type = strtolower($input['vehicle_type'] ?? 'car');
+if ($vehicle_type === 'bike') $vehicle_type = 'motorbike';
 $distance = (float)($input['distance_km'] ?? 0);
 $fare = (float)($input['estimated_fare'] ?? 0);
 

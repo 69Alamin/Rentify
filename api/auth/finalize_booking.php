@@ -27,7 +27,7 @@ function finalizeBooking($conn, $user_id) {
     $guest_phone = $input['guest_phone'] ?? '';
     $is_emergency = !empty($input['is_emergency']) ? 1 : 0;
 
-    if ($vehicle_type === 'motorbike') $vehicle_type = 'bike';
+    if ($vehicle_type === 'bike') $vehicle_type = 'motorbike';
 
 
     // Fetch Room & Price Data
@@ -105,14 +105,23 @@ function finalizeBooking($conn, $user_id) {
 
         // Ride Request
         if ($vehicle_needed) {
-            $ride_sql = "INSERT INTO journey_requests (booking_id, user_id, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, destination_name, vehicle_type, fare, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', NOW())";
+            $ride_sql = "INSERT INTO journey_requests (booking_id, user_id, pickup_address, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, destination_name, vehicle_type, distance, fare, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', NOW())";
             $htlat = (float)$room_data['hotel_lat'];
             $htlng = (float)$room_data['hotel_lng'];
             $pklat = $pickup_lat ?: $htlat;
             $pklng = $pickup_lng ?: $htlng;
+            $pickup_address = $room_data['hotel_address'] ?? 'Hotel Location';
+            
+            // Calculate distance using haversine formula
+            $earth_radius = 6371;
+            $dLat = deg2rad($htlat - $pklat);
+            $dLon = deg2rad($htlng - $pklng);
+            $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($pklat)) * cos(deg2rad($htlat)) * sin($dLon/2) * sin($dLon/2);
+            $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+            $distance = $earth_radius * $c;
             
             // use db_query wrapper if consistent, otherwise prepare
-            db_query($ride_sql, 'iidddsssd', [$booking_id, $user_id, $pklat, $pklng, $htlat, $htlng, $room_data['hotel_address'], $vehicle_type, $vehicle_price]);
+            db_query($ride_sql, 'iisddddssdd', [$booking_id, $user_id, $pickup_address, $pklat, $pklng, $htlat, $htlng, $room_data['hotel_address'], $vehicle_type, $distance, $vehicle_price]);
         }
 
         mysqli_commit($conn);

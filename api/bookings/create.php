@@ -37,9 +37,9 @@ $pickup_lat = (float)($input['pickup_lat'] ?? 0);
 $pickup_lng = (float)($input['pickup_lng'] ?? 0);
 $estimated_ride_fare = (float)($input['estimated_ride_fare'] ?? 0);
 
-// normalize alias
-if ($vehicle_type === 'motorbike') {
-    $vehicle_type = 'bike';
+// normalize alias - DB expects 'motorbike'
+if ($vehicle_type === 'bike') {
+    $vehicle_type = 'motorbike';
 }
 
 if ($hotel_id <= 0 || $room_type_id <= 0 || empty($check_in_date) || $booked_hours <= 0) {
@@ -79,8 +79,8 @@ if ($vehicle_needed) {
         $c = 2 * atan2(sqrt($a), sqrt(1-$a));
         $distance = $earth_radius * $c;
 
-        $base_fare = ($vehicle_type === 'bike') ? 50 : 100;
-        $rate_per_km = ($vehicle_type === 'bike') ? 15 : 40;
+        $base_fare = ($vehicle_type === 'motorbike') ? 50 : 100;
+        $rate_per_km = ($vehicle_type === 'motorbike') ? 15 : 40;
         $vehicle_price = $base_fare + ($distance * $rate_per_km);
     }
 
@@ -182,7 +182,7 @@ try {
         $luggage_needed = !empty($input['luggage_needed']) ? 1 : 0;
 
         // Align with journey_requests schema
-        $ride_sql = "INSERT INTO journey_requests (booking_id, user_id, pickup_address, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, destination_name, vehicle_type, fare, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', NOW())";
+        $ride_sql = "INSERT INTO journey_requests (booking_id, user_id, pickup_address, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, destination_name, vehicle_type, distance, fare, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', NOW())";
 
         $ht_address = $room_data['hotel_address'] ?? 'Hotel Location';
         $htlat = (float)($room_data['hotel_lat'] ?? 0);
@@ -202,7 +202,15 @@ try {
             $pickup_address = $ht_address;
         }
         
-        if (!db_query($ride_sql, 'issddddssd', [$booking_id, $_SESSION['user_id'], $pickup_address, $pklat, $pklng, $htlat, $htlng, $ht_address, $vehicle_type, $vehicle_price])) {
+        // Calculate distance using haversine formula
+        $earth_radius = 6371;
+        $dLat = deg2rad($htlat - $pklat);
+        $dLon = deg2rad($htlng - $pklng);
+        $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($pklat)) * cos(deg2rad($htlat)) * sin($dLon/2) * sin($dLon/2);
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        $distance = $earth_radius * $c;
+        
+        if (!db_query($ride_sql, 'iisddddssdd', [$booking_id, $user_id, $pickup_address, $pklat, $pklng, $htlat, $htlng, $ht_address, $vehicle_type, $distance, $vehicle_price])) {
             throw new Exception('Failed to create ride request');
         }
     }
