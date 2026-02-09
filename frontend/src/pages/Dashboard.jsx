@@ -150,7 +150,7 @@ const Dashboard = () => {
                 const data = await res.json();
                 if (data.success) {
                     setActiveOrders(prev => {
-                        const newOrders = data.data;
+                        const newOrders = data.data.filter(o => ['pending', 'accepted', 'cooking', 'ready'].includes(o.status));
                         if (prev.length > 0) {
                             newOrders.forEach(no => {
                                 const old = prev.find(po => po.id === no.id);
@@ -171,9 +171,15 @@ const Dashboard = () => {
                 const res = await fetch('/api/rides/request.php', { credentials: 'include' });
                 const data = await res.json();
                 if (data.success) {
-                    setRides(data.data);
+                    setRides(data.data || []);
+                } else {
+                    console.log('Rides API error:', data.message);
+                    setRides([]);
                 }
-            } catch (err) { }
+            } catch (err) {
+                console.error('Error fetching rides:', err);
+                setRides([]);
+            }
         };
         fetchRides();
         const interval = setInterval(fetchRides, 5000);

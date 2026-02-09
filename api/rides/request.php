@@ -24,7 +24,17 @@ session_start();
 require_once __DIR__ . '/../../db_conn.php';
 
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Unauthorized - No session',
+        'debug' => [
+            'session_id' => session_id(),
+            'session_vars' => array_keys($_SESSION),
+            'has_user_id' => isset($_SESSION['user_id']),
+            'php_version' => phpversion(),
+            'cookies_received' => array_keys($_COOKIE)
+        ]
+    ]);
     exit();
 }
 
@@ -80,21 +90,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         ];
     } else {
         // Customer: show their ride requests with assigned rider
-        $sql = "SELECT jr.*, jr.fare AS estimated_fare,
-            jr.pickup_latitude AS pickup_lat,
-            jr.pickup_longitude AS pickup_lng,
-            jr.dropoff_latitude AS destination_lat, 
-            jr.dropoff_longitude AS destination_lng,
-            jr.pickup_address,
-            d.full_name as driver_name, d.phone as driver_phone, u.last_lat as driver_lat, u.last_lng as driver_lng,
-            d.rating_avg as driver_rating, d.is_verified as driver_verified, d.vehicle_model
-            FROM journey_requests_detailed jr 
-            LEFT JOIN user_profiles_complete d ON jr.rider_id = d.id
-            LEFT JOIN users u ON jr.rider_id = u.id
-            WHERE jr.user_id = ?
-            ORDER BY jr.created_at DESC";
-        $res = db_query($sql, 'i', [$user_id]);
-        if ($res) while($row = mysqli_fetch_assoc($res)) $rides[] = $row;
+        // Try using the view first, but fall back to raw table if view fails
+        $view_available = false;
+        $debug_source = 'view_failure_fallback';
+        
+        // Check if view exists
+        $view_check = db_query("SELECT 1 FROM information_schema.TABLES WHERE TABLE_TYPE='VIEW' AND TABLE_NAME='journey_requests_detailed' AND TABLE_SCHEMA=DATABASE()");
+        if ($view_check && mysqli_num_rows($view_check) > 0) {
+            $view_available = true;
+            $debug_source = 'view';
+            
+            $sql = "SELECT jr.*, jr.fare AS estimated_fare,
+                jr.pickup_latitude AS pickup_lat,
+                jr.pickup_longitude AS pickup_lng,
+                jr.dropoff_latitude AS destination_lat, 
+                jr.dropoff_longitude AS destination_lng,
+                jr.pickup_address,
+                jr.destination_name,
+                COALESCE(jr.destination_name, jr.dropoff_location_address) AS destination_address,
+                d.full_name as driver_name, d.phone as driver_phone, u.last_lat as driver_lat, u.last_lng as driver_lng,
+                d.rating_avg as driver_rating, d.is_verified as driver_verified, d.vehicle_model
+                FROM journey_requests_detailed jr 
+                LEFT JOIN user_profiles_complete d ON jr.rider_id = d.id
+                LEFT JOIN users u ON jr.rider_id = u.id
+                WHERE jr.user_id = ?
+                ORDER BY jr.created_at DESC";
+            $res = db_query($sql, 'i', [$user_id]);
+            if ($res) while($row = mysqli_fetch_assoc($res)) $rides[] = $row;
+        }
+        
+        // Fallback: if view didn't work or no results, query raw table
+        if (!$view_available || count($rides) === 0) {
+            $debug_source = 'raw_table_fallback';
+            $sql = "SELECT 
+                id, booking_id, user_id, pickup_address, vehicle_type, 
+                distance, fare, status, created_at,
+                pickup_latitude, pickup_longitude,
+                dropoff_latitude, dropoff_longitude,
+                destination_name,
+                rider_id,
+                pickup_latitude AS pickup_lat,
+                pickup_longitude AS pickup_lng,
+                dropoff_latitude AS destination_lat,
+                dropoff_longitude AS destination_lng,
+                destination_name AS destination_address,
+                fare AS estimated_fare,
+                NULL AS pickup_location_address,
+                NULL AS dropoff_location_address,
+                NULL AS customer_name,
+                NULL AS customer_phone,
+                NULL AS vehicle_model,
+                NULL AS number_plate,
+                NULL AS rider_name,
+                NULL AS rider_phone,
+                NULL AS driver_name,
+                NULL AS driver_phone,
+                NULL AS driver_lat,
+                NULL AS driver_lng,
+                NULL AS driver_rating,
+                NULL AS driver_verified
+                FROM journey_requests
+                WHERE user_id = ?
+                ORDER BY created_at DESC";
+            $res = db_query($sql, 'i', [$user_id]);
+            if ($res) while($row = mysqli_fetch_assoc($res)) $rides[] = $row;
+        }
+        
+        $debug = [
+            'query_user_id' => $user_id,
+            'user_type' => $user_type,
+            'rides_found' => count($rides),
+            'data_source' => $debug_source,
+            'session_vars' => array_keys($_SESSION)
+        ];
     }
 
     echo json_encode([

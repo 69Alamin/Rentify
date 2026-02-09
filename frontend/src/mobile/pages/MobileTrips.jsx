@@ -16,6 +16,7 @@ const MobileTrips = () => {
     const [loading, setLoading] = useState(true);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedRide, setSelectedRide] = useState(null);
+    const [selectedFood, setSelectedFood] = useState(null);
     const [showNavigation, setShowNavigation] = useState(false);
     const [chatTarget, setChatTarget] = useState(null); // { id, name, contextId, contextType }
 
@@ -57,10 +58,16 @@ const MobileTrips = () => {
 
             if (staysData.success) setBookings(staysData.data);
             if (foodData.success) setFoodOrders(foodData.data);
-            if (ridesData.success) setRides(ridesData.data);
+            if (ridesData.success) {
+                setRides(ridesData.data || []);
+            } else {
+                console.log('Rides API error:', ridesData.message);
+                setRides([]);
+            }
 
         } catch (error) {
             console.error("Error fetching trips data:", error);
+            setRides([]);
         } finally {
             setLoading(false);
         }
@@ -488,7 +495,11 @@ const MobileTrips = () => {
                             {foodOrders.length === 0 ? (
                                 <EmptyState icon={Utensils} message="No past food orders" />
                             ) : foodOrders.map(order => (
-                                <div key={order.id} className="bg-navy-light p-5 rounded-3xl border border-white/5">
+                                <div 
+                                    key={order.id} 
+                                    onClick={() => setSelectedFood(order)}
+                                    className="bg-navy-light p-5 rounded-3xl border border-white/5 cursor-pointer hover:border-accent/50 transition-all"
+                                >
                                     <div className="flex justify-between items-center mb-3">
                                         <div className="flex items-center gap-2">
                                             <div className="p-1.5 bg-white/5 rounded-full">
@@ -505,10 +516,16 @@ const MobileTrips = () => {
                                         <div className="flex items-center gap-2">
                                             <Package size={14} className="text-gray-400" />
                                             <span className="text-xs font-bold text-gray-300">
-                                                {JSON.parse(order.items_json).length} Items
+                                                {JSON.parse(order.items_json || '[]').length} Items
                                             </span>
                                         </div>
-                                        <span className="font-black text-accent">৳{order.total_amount}</span>
+                                        <span className="font-black text-accent text-sm">
+                                            ৳{order.total_amount || order.total || (
+                                                Array.isArray(order.items) 
+                                                    ? order.items.reduce((sum, item) => sum + (item.subtotal || 0), 0)
+                                                    : JSON.parse(order.items_json || '[]').reduce((sum, item) => sum + (item.subtotal || 0), 0)
+                                            )}
+                                        </span>
                                     </div>
                                     <button
                                         onClick={() => setChatTarget({
@@ -622,7 +639,7 @@ const MobileTrips = () => {
                                         <div className="relative">
                                             <div className="absolute -left-[19px] top-1 w-2.5 h-2.5 rounded-full bg-accent ring-4 ring-navy-light"></div>
                                             <p className="text-[9px] font-bold text-gray-500 uppercase">Dropoff</p>
-                                            <p className="text-xs font-bold text-white truncate">{ride.destination_address}</p>
+                                            <p className="text-xs font-bold text-white truncate">{ride.destination_address || ride.destination_name || 'Destination'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -809,6 +826,100 @@ const MobileTrips = () => {
                 )}
             </AnimatePresence>
 
+            {/* Food Order Details Sheet */}
+            <AnimatePresence>
+                {selectedFood && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/80 z-[60] backdrop-blur-sm"
+                            onClick={() => setSelectedFood(null)}
+                        />
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="fixed bottom-0 left-0 right-0 bg-navy-light rounded-t-[2.5rem] z-[70] overflow-hidden max-h-[85vh] overflow-y-auto shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-white/10"
+                        >
+                            <div className="p-6 space-y-6">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusColor(selectedFood.status)}`}>
+                                            {selectedFood.status}
+                                        </span>
+                                        <h2 className="text-2xl font-black text-white mt-3">Order Details</h2>
+                                    </div>
+                                    <button
+                                        onClick={() => setSelectedFood(null)}
+                                        className="p-2 bg-white/5 rounded-full text-gray-400 hover:bg-white/10"
+                                    >
+                                        <XCircle size={24} />
+                                    </button>
+                                </div>
+
+                                {/* Order Header */}
+                                <div className="bg-navy p-4 rounded-2xl border border-white/10 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-gray-400">Order ID</span>
+                                        <span className="font-black text-white">#{selectedFood.id}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-gray-400">Restaurant</span>
+                                        <span className="font-bold text-white">{selectedFood.hotel_name}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs font-bold text-gray-400">Total Amount</span>
+                                        <span className="font-black text-accent text-lg">
+                                            ৳{selectedFood.total_amount || (
+                                                Array.isArray(selectedFood.items) 
+                                                    ? selectedFood.items.reduce((sum, item) => sum + (item.subtotal || 0), 0)
+                                                    : JSON.parse(selectedFood.items_json || '[]').reduce((sum, item) => sum + (item.subtotal || 0), 0)
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Items List */}
+                                <div className="space-y-3">
+                                    <h3 className="text-sm font-black text-white">Order Items</h3>
+                                    {(Array.isArray(selectedFood.items) 
+                                        ? selectedFood.items 
+                                        : JSON.parse(selectedFood.items_json || '[]')
+                                    ).map((item, idx) => (
+                                        <div key={idx} className="bg-navy p-3 rounded-xl border border-white/5 flex justify-between items-center">
+                                            <div>
+                                                <p className="text-sm font-bold text-white">{item.item_name || item.name}</p>
+                                                <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
+                                            </div>
+                                            <span className="font-black text-accent">৳{item.subtotal || (item.quantity * item.price_at_order)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Message Button */}
+                                <button
+                                    onClick={() => {
+                                        setChatTarget({
+                                            id: selectedFood.vendor_id,
+                                            name: selectedFood.hotel_name,
+                                            contextId: selectedFood.id,
+                                            contextType: 'food'
+                                        });
+                                        setSelectedFood(null);
+                                    }}
+                                    className="w-full bg-gradient-to-r from-accent to-accent/80 py-4 rounded-2xl font-black text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:from-accent/90 hover:to-accent/70 transition-all"
+                                >
+                                    <MessageCircle size={16} /> Message Vendor
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
+
             {/* Ride Details Sheet */}
             <AnimatePresence>
                 {selectedRide && (
@@ -855,7 +966,7 @@ const MobileTrips = () => {
                                         <div className="relative">
                                             <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-accent ring-4 ring-navy"></div>
                                             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Destination</p>
-                                            <p className="font-bold text-white mt-1">{selectedRide.destination_address}</p>
+                                            <p className="font-bold text-white mt-1">{selectedRide.destination_address || selectedRide.destination_name || 'Destination'}</p>
                                         </div>
                                     </div>
                                 </div>

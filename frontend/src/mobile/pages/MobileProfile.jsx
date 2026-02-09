@@ -211,7 +211,7 @@ const MobileProfile = () => {
                         </div>
                         <div className="text-xs font-bold text-white/60 mb-1 uppercase tracking-widest">Available Credit</div>
                         <div className="text-3xl font-black tracking-tight mb-4 italic text-white">
-                            ৳{user?.balance?.toLocaleString() || '0'}
+                            ৳{parseFloat(user?.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             <button className="bg-white text-secondary py-3 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-white/90 transition-all">Add Funds</button>

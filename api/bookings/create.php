@@ -181,8 +181,8 @@ try {
         $passengers = (int)($input['passengers'] ?? 1);
         $luggage_needed = !empty($input['luggage_needed']) ? 1 : 0;
 
-        // Align with journey_requests schema (pickup_latitude/longitude, dropoff_latitude/longitude, destination_name, vehicle_type, fare)
-        $ride_sql = "INSERT INTO journey_requests (booking_id, user_id, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, destination_name, vehicle_type, fare, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', NOW())";
+        // Align with journey_requests schema
+        $ride_sql = "INSERT INTO journey_requests (booking_id, user_id, pickup_address, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, destination_name, vehicle_type, fare, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'requested', NOW())";
 
         $ht_address = $room_data['hotel_address'] ?? 'Hotel Location';
         $htlat = (float)($room_data['hotel_lat'] ?? 0);
@@ -191,12 +191,18 @@ try {
         // If user denied geolocation, fall back to hotel coords to avoid hard failure
         $pklat = (float)($input['pickup_lat'] ?? 0);
         $pklng = (float)($input['pickup_lng'] ?? 0);
+        
+        // Determine pickup address (use hotel address if we are at hotel, or "Current Location" if using coords)
+        // ideally, we should reverse geocode, but for now we'll use a placeholder or input if available
+        $pickup_address = $input['pickup_address'] ?? "Current Location ($pklat, $pklng)";
+
         if (!$pklat || !$pklng) {
             $pklat = $htlat;
             $pklng = $htlng;
+            $pickup_address = $ht_address;
         }
         
-        if (!db_query($ride_sql, 'iidddsssd', [$booking_id, $_SESSION['user_id'], $pklat, $pklng, $htlat, $htlng, $ht_address, $vehicle_type, $vehicle_price])) {
+        if (!db_query($ride_sql, 'issddddssd', [$booking_id, $_SESSION['user_id'], $pickup_address, $pklat, $pklng, $htlat, $htlng, $ht_address, $vehicle_type, $vehicle_price])) {
             throw new Exception('Failed to create ride request');
         }
     }

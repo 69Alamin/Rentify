@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $user_type = $_SESSION['user_type'];
     
     if ($user_type === 'admin') {
-        $sql = "SELECT fo.*, o.items_json, u.full_name as customer_name, b.hotel_name, b.check_in_time, b.vendor_id
+        $sql = "SELECT fo.*, o.items_json, o.total_amount, u.full_name as customer_name, b.hotel_name, b.check_in_time, b.vendor_id
                 FROM food_orders_detailed fo
                 JOIN food_orders o ON fo.id = o.id
                 JOIN users u ON fo.user_id = u.id
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ORDER BY fo.created_at DESC";
         $res = db_query($sql);
     } elseif ($user_type === 'vendor') {
-        $sql = "SELECT fo.*, o.items_json, u.full_name as customer_name, b.hotel_name, b.check_in_time, b.vendor_id
+        $sql = "SELECT fo.*, o.items_json, o.total_amount, u.full_name as customer_name, b.hotel_name, b.check_in_time, b.vendor_id
                 FROM food_orders_detailed fo
                 JOIN food_orders o ON fo.id = o.id
                 JOIN users u ON fo.user_id = u.id
@@ -32,10 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 ORDER BY fo.created_at DESC";
         $res = db_query($sql, 'i', [$user_id]);
     } else {
-        $sql = "SELECT fo.*, o.items_json, b.hotel_name, b.vendor_id
+        $sql = "SELECT fo.*, o.items_json, o.total_amount, b.hotel_name, b.vendor_id
                 FROM food_orders_detailed fo
                 JOIN food_orders o ON fo.id = o.id
-                JOIN bookings_detailed b ON fo.booking_id = b.id
+                LEFT JOIN bookings_detailed b ON fo.booking_id = b.id
                 WHERE fo.user_id = ?
                 ORDER BY fo.created_at DESC";
         $res = db_query($sql, 'i', [$user_id]);
@@ -115,6 +115,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $price = isset($item['price']) ? (float)$item['price'] : 0.0;
             $subtotal = $qty * $price;
             $item_total += $subtotal;
+
+            // Check if menu item exists to avoid FK error
+            if ($menu_id) {
+                $check_res = db_query("SELECT id FROM menu_items WHERE id = ?", 'i', [$menu_id]);
+                if (mysqli_num_rows($check_res) === 0) {
+                    $menu_id = null; // Item deleted, keep name/price but unlink ID
+                }
+            }
 
             if ($name === '' || $qty <= 0) {
                 mysqli_rollback($conn);

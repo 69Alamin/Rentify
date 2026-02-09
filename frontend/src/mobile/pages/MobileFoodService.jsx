@@ -77,7 +77,7 @@ const MobileFoodService = () => {
     };
 
     const calculateTotal = () => {
-        return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2);
+        return cart.reduce((sum, item) => sum + (parseFloat(item.price || 0) * item.quantity), 0).toFixed(2);
     };
 
     const getImageUrl = (url) => {
